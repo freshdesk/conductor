@@ -514,6 +514,12 @@
                 "com.netflix.conductor:conductor-redis-persistence"
             ],
             "locked": "3.8.0"
+        },
+        "org.flywaydb:flyway-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-mysql-persistence"
+            ],
+            "locked": "7.15.0"
         }
     },
     "runtimeClasspath": {
@@ -952,6 +958,12 @@
                 "com.netflix.conductor:conductor-redis-persistence"
             ],
             "locked": "3.8.0"
+        },
+        "org.flywaydb:flyway-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-mysql-persistence"
+            ],
+            "locked": "7.15.0"
         }
     },
     "testCompileClasspath": {
@@ -1500,6 +1512,12 @@
                 "com.netflix.conductor:conductor-redis-persistence"
             ],
             "locked": "3.8.0"
+        },
+        "org.flywaydb:flyway-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-mysql-persistence"
+            ],
+            "locked": "7.15.0"
         }
     }
 }

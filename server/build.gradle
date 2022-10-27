@@ -19,6 +19,7 @@ dependencies {
 
     implementation project(':conductor-rest')
     implementation project(':conductor-core')
+    implementation project(':conductor-mysql-persistence')
     implementation project(':conductor-redis-persistence')
     implementation project(':conductor-cassandra-persistence')
     implementation project(':conductor-es6-persistence')
