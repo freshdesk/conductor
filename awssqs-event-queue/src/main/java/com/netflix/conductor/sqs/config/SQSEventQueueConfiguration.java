@@ -29,6 +29,7 @@ import com.netflix.conductor.model.TaskModel.Status;
 import com.netflix.conductor.sqs.eventqueue.SQSObservableQueue.Builder;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.sqs.AmazonSQSClient;
 import rx.Scheduler;
 
@@ -87,5 +88,11 @@ public class SQSEventQueueConfiguration {
         }
 
         return queues;
+    }
+
+    @ConditionalOnMissingBean
+    @Bean
+    public AWSCredentialsProvider awsCredentialsProvider() {
+        return DefaultAWSCredentialsProviderChain.getInstance();
     }
 }
