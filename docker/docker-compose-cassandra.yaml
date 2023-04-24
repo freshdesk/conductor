@@ -1,0 +1,47 @@
+version: '2.3'
+
+services:
+  conductor-server:
+    environment:
+      - CONFIG_PROP=config-cassandra.properties
+
+  cassandra:
+    image: cassandra
+    ports:
+      - '7000:7000'
+      - '9042:9042'
+    healthcheck:
+      test: [ "CMD", "/opt/cassandra/bin/cqlsh", "-u cassandra", "-p cassandra" ,"-e \"describe keyspaces\"" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    environment:
+        - CASSANDRA_CLUSTER_NAME=cassandra_cluster
+        - CASSANDRA_SEEDS=cassandra
+        - CASSANDRA_PASSWORD_SEEDER=yes
+        - CASSANDRA_PASSWORD=cassandra
+        - CASSANDRA_TRANSPORT_PORT_NUMBER=7000
+    networks:
+      - internal
+    volumes:
+      - cassandra-conductor:/var/lib/cassandra/data
+
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - internal
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - cache:/data
+
+volumes:
+  cassandra-conductor:
+    driver: local
+  cache:
+    driver: local
+
+networks:
+  internal:

@@ -193,26 +193,3 @@ sonarqube {
     }
 }
 
-configure(allprojects - project(':conductor-grpc')) {
-    apply plugin: 'com.diffplug.spotless'
-
-    spotless {
-        java {
-            googleJavaFormat().aosp()
-            removeUnusedImports()
-            importOrder('java', 'javax', 'org', 'com.netflix', '', '\\#com.netflix', '\\#')
-            licenseHeaderFile("$rootDir/licenseheader.txt")
-        }
-    }
-}
-
-['cassandra-persistence', 'core', 'redis-concurrency-limit', 'test-harness', 'client'].each {
-    configure(project(":conductor-$it")) {
-        spotless {
-            groovy {
-                importOrder('java', 'javax', 'org', 'com.netflix', '', '\\#com.netflix', '\\#')
-                licenseHeaderFile("$rootDir/licenseheader.txt")
-            }
-        }
-    }
-}

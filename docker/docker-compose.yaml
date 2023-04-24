@@ -18,14 +18,14 @@ services:
       interval: 60s
       timeout: 30s
       retries: 12
-    links:
-      - elasticsearch:es
-      - redis:rs
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+#    links:
+#      - elasticsearch:es
+#      - redis:rs
+#    depends_on:
+#      elasticsearch:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
     logging:
       driver: "json-file"
       options:
@@ -48,46 +48,46 @@ services:
       - conductor-server
     stdin_open: true
 
-  redis:
-    image: redis:6.2.3-alpine
-    volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-    networks:
-      - internal
-    ports:
-      - 6379:6379
-    healthcheck:
-      test: [ "CMD", "redis-cli","ping" ]
-
-  elasticsearch:
-    image: elasticsearch:6.8.15
-    container_name: elasticsearch
-    environment:
-      - "ES_JAVA_OPTS=-Xms512m -Xmx1024m"
-      - transport.host=0.0.0.0
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-    volumes:
-      - esdata-conductor:/usr/share/elasticsearch/data
-    networks:
-      - internal
-    ports:
-      - 9200:9200
-      - 9300:9300
-    healthcheck:
-      test: wget http://localhost:9200/ -O /dev/null
-      interval: 5s
-      timeout: 5s
-      retries: 12
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "1k"
-        max-file: "3"
-
-volumes:
-  esdata-conductor:
-    driver: local
+#  redis:
+#    image: redis:6.2.3-alpine
+#    volumes:
+#      - ./redis.conf:/usr/local/etc/redis/redis.conf
+#    networks:
+#      - internal
+#    ports:
+#      - 6379:6379
+#    healthcheck:
+#      test: [ "CMD", "redis-cli","ping" ]
+#
+#  elasticsearch:
+#    image: elasticsearch:6.8.15
+#    container_name: elasticsearch
+#    environment:
+#      - "ES_JAVA_OPTS=-Xms512m -Xmx1024m"
+#      - transport.host=0.0.0.0
+#      - discovery.type=single-node
+#      - xpack.security.enabled=false
+#    volumes:
+#      - esdata-conductor:/usr/share/elasticsearch/data
+#    networks:
+#      - internal
+#    ports:
+#      - 9200:9200
+#      - 9300:9300
+#    healthcheck:
+#      test: wget http://localhost:9200/ -O /dev/null
+#      interval: 5s
+#      timeout: 5s
+#      retries: 12
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "1k"
+#        max-file: "3"
+#
+#volumes:
+#  esdata-conductor:
+#    driver: local
 
 networks:
   internal:

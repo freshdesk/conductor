@@ -12,6 +12,19 @@
  */
 package com.netflix.conductor.cassandra.config;
 
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Metadata;
+import com.datastax.driver.core.ProtocolVersion;
+import com.datastax.driver.core.Session;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.netflix.conductor.cassandra.config.cache.CacheableEventHandlerDAO;
+import com.netflix.conductor.cassandra.config.cache.CacheableMetadataDAO;
+import com.netflix.conductor.cassandra.dao.*;
+import com.netflix.conductor.cassandra.util.Statements;
+import com.netflix.conductor.dao.EventHandlerDAO;
+import com.netflix.conductor.dao.ExecutionDAO;
+import com.netflix.conductor.dao.MetadataDAO;
+import com.netflix.conductor.dao.RateLimitingDAO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,22 +32,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import com.netflix.conductor.cassandra.config.cache.CacheableEventHandlerDAO;
-import com.netflix.conductor.cassandra.config.cache.CacheableMetadataDAO;
-import com.netflix.conductor.cassandra.dao.CassandraEventHandlerDAO;
-import com.netflix.conductor.cassandra.dao.CassandraExecutionDAO;
-import com.netflix.conductor.cassandra.dao.CassandraMetadataDAO;
-import com.netflix.conductor.cassandra.dao.CassandraPollDataDAO;
-import com.netflix.conductor.cassandra.util.Statements;
-import com.netflix.conductor.dao.EventHandlerDAO;
-import com.netflix.conductor.dao.ExecutionDAO;
-import com.netflix.conductor.dao.MetadataDAO;
-
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.Metadata;
-import com.datastax.driver.core.Session;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(CassandraProperties.class)
@@ -50,7 +47,11 @@ public class CassandraConfiguration {
 
         LOGGER.info("Connecting to cassandra cluster with host:{}, port:{}", host, port);
 
-        Cluster cluster = Cluster.builder().addContactPoint(host).withPort(port).build();
+        Cluster cluster = Cluster.builder()
+                .withoutJMXReporting()
+                .withProtocolVersion(ProtocolVersion.V3)
+                .addContactPoint(host)
+                .withPort(port).build();
 
         Metadata metadata = cluster.getMetadata();
         LOGGER.info("Connected to cluster: {}", metadata.getClusterName());
@@ -112,5 +113,9 @@ public class CassandraConfiguration {
     @Bean
     public Statements statements(CassandraProperties cassandraProperties) {
         return new Statements(cassandraProperties.getKeyspace());
+    }
+    @Bean
+    public RateLimitingDAO cassandraRateLimitingDAO() {
+        return new CassandraRateLimitingDAO();
     }
 }

@@ -41,6 +41,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation "io.orkes.queues:orkes-conductor-queues:${revOrkesQueues}"
 
+    implementation 'com.netflix.conductor:conductor-workflow-event-listener:3.13.3'
+    implementation 'com.netflix.conductor:conductor-kafka:3.13.3'
+
     implementation "org.springdoc:springdoc-openapi-ui:${revOpenapi}"
 
     runtimeOnly "org.glassfish.jaxb:jaxb-runtime:${revJAXB}"

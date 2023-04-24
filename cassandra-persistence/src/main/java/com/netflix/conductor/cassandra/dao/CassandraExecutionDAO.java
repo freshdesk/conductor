@@ -12,12 +12,11 @@
  */
 package com.netflix.conductor.cassandra.dao;
 
-import java.util.*;
-import java.util.stream.Collectors;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.exceptions.DriverException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.netflix.conductor.annotations.Trace;
 import com.netflix.conductor.cassandra.config.CassandraProperties;
 import com.netflix.conductor.cassandra.util.Statements;
@@ -31,12 +30,11 @@ import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.model.TaskModel;
 import com.netflix.conductor.model.WorkflowModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.*;
-import com.datastax.driver.core.exceptions.DriverException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.netflix.conductor.cassandra.util.Constants.*;
 
@@ -50,7 +48,10 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     protected final PreparedStatement insertWorkflowStatement;
     protected final PreparedStatement insertTaskStatement;
     protected final PreparedStatement insertEventExecutionStatement;
-
+    protected final PreparedStatement insertTaskInProgressStatement;
+    protected final PreparedStatement selectTaskInProgressStatement;
+    protected final PreparedStatement updateTaskInProgressStatement;
+    protected final PreparedStatement deleteTaskInProgressStatement;
     protected final PreparedStatement selectTotalStatement;
     protected final PreparedStatement selectTaskStatement;
     protected final PreparedStatement selectWorkflowStatement;
@@ -93,6 +94,23 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                 session.prepare(statements.getInsertEventExecutionStatement())
                         .setConsistencyLevel(properties.getWriteConsistencyLevel());
 
+        this.insertTaskInProgressStatement =
+                session.prepare(statements.getInsertTaskInProgressStatement())
+                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
+
+
+        this.selectTaskInProgressStatement =
+                session.prepare(statements.getSelectTaskInProgressStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.updateTaskInProgressStatement =
+                session.prepare(statements.getUpdateTaskInProgressStatement())
+                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
+
+        this.deleteTaskInProgressStatement =
+                session.prepare(statements.getDeleteTaskInProgressStatement())
+                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
+
         this.selectTotalStatement =
                 session.prepare(statements.getSelectTotalStatement())
                         .setConsistencyLevel(properties.getReadConsistencyLevel());
@@ -116,7 +134,6 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                                 statements
                                         .getSelectAllEventExecutionsForMessageFromEventExecutionsStatement())
                         .setConsistencyLevel(properties.getReadConsistencyLevel());
-
         this.updateWorkflowStatement =
                 session.prepare(statements.getUpdateWorkflowStatement())
                         .setConsistencyLevel(properties.getWriteConsistencyLevel());
@@ -188,7 +205,6 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
             WorkflowMetadata workflowMetadata = getWorkflowMetadata(workflowId);
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
             // TODO: write into multiple shards based on number of tasks
-
             // update the task_lookup table
             tasks.forEach(
                     task -> {
@@ -198,6 +214,8 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                         session.execute(
                                 updateTaskLookupStatement.bind(
                                         workflowUUID, toUUID(task.getTaskId(), "Invalid task id")));
+                        // Added the task to task_in_progress table
+                        addTaskInProgress(task);
                     });
 
             // update all the tasks in the workflow using batch
@@ -213,11 +231,14 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                                         taskPayload));
                         recordCassandraDaoRequests(
                                 "createTask", task.getTaskType(), task.getWorkflowType());
+
                         recordCassandraDaoPayloadSize(
                                 "createTask",
                                 taskPayload.length(),
                                 task.getTaskType(),
                                 task.getWorkflowType());
+
+
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, DEFAULT_SHARD_ID));
@@ -239,6 +260,43 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         }
     }
 
+    public void addTaskInProgress(TaskModel task) {
+        LOGGER.info("Inside addTaskInProgress wth TaskModel {}", task.toString());
+        ResultSet resultSet =
+                session.execute(
+                        selectTaskInProgressStatement.bind(task.getTaskDefName(),
+                                UUID.fromString(task.getTaskId())));
+        LOGGER.info("Received resultset is {}", resultSet.all().toString());
+       /* List<String> taskIds =
+                resultSet.all().stream()
+                        .map(row -> row.getUUID(TASK_ID_KEY).toString())
+                        .collect(Collectors.toList());*/
+
+        if (resultSet.all().size()<1)
+            LOGGER.info("Insert for task_in_progress {}", task.toString());
+            session.execute(
+                    insertTaskInProgressStatement.bind(task.getTaskDefName(),
+                            UUID.fromString(task.getTaskId()),
+                            UUID.fromString(task.getWorkflowInstanceId()),
+                            true));
+
+    }
+
+    public void removeTaskInProgress(TaskModel task) {
+        LOGGER.info("Remove for task_in_progress {}", task.toString());
+        session.execute(
+                deleteTaskInProgressStatement.bind(task.getTaskDefName(),task.getTaskId(),task.getWorkflowInstanceId()));
+        LOGGER.info("Removed for task_in_progress {}", task.toString());
+
+    }
+
+    public void updateTaskInProgress(TaskModel task, boolean inProgress) {
+        LOGGER.info("Update for task_in_progress {}", task.toString());
+        session.execute(
+                updateTaskInProgressStatement.bind(inProgress,task.getTaskDefName(),task.getTaskId(),task.getWorkflowInstanceId()));
+        LOGGER.info("Updated for task_in_progress {}", task.toString());
+    }
+
     @Override
     public void updateTask(TaskModel task) {
         try {
@@ -253,10 +311,17 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                             DEFAULT_SHARD_ID,
                             task.getTaskId(),
                             taskPayload));
+            boolean inProgress =
+                    task.getStatus() != null
+                            && task.getStatus().equals(TaskModel.Status.IN_PROGRESS);
+            LOGGER.info("Called to update for task_in_progress status {}", inProgress);
             if (task.getTaskDefinition().isPresent()
                     && task.getTaskDefinition().get().concurrencyLimit() > 0) {
+                LOGGER.info("Inside getTaskDefinition to update for task_in_progress status {}", inProgress);
+                updateTaskInProgress( task,  inProgress);
                 if (task.getStatus().isTerminal()) {
                     removeTaskFromLimit(task);
+                    removeTaskInProgress(task);
                 } else if (task.getStatus() == TaskModel.Status.IN_PROGRESS) {
                     addTaskToLimit(task);
                 }

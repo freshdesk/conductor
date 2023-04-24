@@ -25,6 +25,8 @@ public interface Constants {
     String TABLE_EVENT_HANDLERS = "event_handlers";
     String TABLE_EVENT_EXECUTIONS = "event_executions";
 
+    String TABLE_TASK_IN_PROGRESS = "task_in_progress";
+
     String WORKFLOW_ID_KEY = "workflow_id";
     String SHARD_ID_KEY = "shard_id";
     String TASK_ID_KEY = "task_id";
@@ -46,6 +48,8 @@ public interface Constants {
     String EVENT_HANDLER_KEY = "event_handler";
     String MESSAGE_ID_KEY = "message_id";
     String EVENT_EXECUTION_ID_KEY = "event_execution_id";
+
+    String TASK_IN_PROG_STATUS_KEY = "in_progress_status";
 
     String ENTITY_TYPE_WORKFLOW = "workflow";
     String ENTITY_TYPE_TASK = "task";

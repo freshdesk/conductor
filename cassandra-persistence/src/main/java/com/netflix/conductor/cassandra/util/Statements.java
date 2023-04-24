@@ -14,41 +14,8 @@ package com.netflix.conductor.cassandra.util;
 
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-import static com.netflix.conductor.cassandra.util.Constants.ENTITY_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.ENTITY_TYPE_TASK;
-import static com.netflix.conductor.cassandra.util.Constants.ENTITY_TYPE_WORKFLOW;
-import static com.netflix.conductor.cassandra.util.Constants.EVENT_EXECUTION_ID_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.EVENT_HANDLER_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.EVENT_HANDLER_NAME_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.HANDLERS_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.MESSAGE_ID_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.PAYLOAD_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.SHARD_ID_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_EVENT_EXECUTIONS;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_EVENT_HANDLERS;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_TASK_DEFS;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_TASK_DEF_LIMIT;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_TASK_LOOKUP;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_WORKFLOWS;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_WORKFLOW_DEFS;
-import static com.netflix.conductor.cassandra.util.Constants.TABLE_WORKFLOW_DEFS_INDEX;
-import static com.netflix.conductor.cassandra.util.Constants.TASK_DEFINITION_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.TASK_DEFS_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.TASK_DEF_NAME_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.TASK_ID_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.TOTAL_PARTITIONS_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.TOTAL_TASKS_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_DEFINITION_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_DEF_INDEX_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_DEF_INDEX_VALUE;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_DEF_NAME_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_DEF_NAME_VERSION_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_ID_KEY;
-import static com.netflix.conductor.cassandra.util.Constants.WORKFLOW_VERSION_KEY;
-
-import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.set;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
+import static com.netflix.conductor.cassandra.util.Constants.*;
 
 /**
  * DML statements
@@ -316,7 +283,6 @@ public class Statements {
                 .value(PAYLOAD_KEY, bindMarker())
                 .getQueryString();
     }
-
     /**
      * @return cql query statement to insert a new event execution into the "event_executions" table
      */
@@ -331,6 +297,39 @@ public class Statements {
     }
 
     // Select Statements
+    public String getInsertTaskInProgressStatement() {
+        return QueryBuilder.insertInto(keyspace, TABLE_TASK_IN_PROGRESS)
+                .value(TASK_DEF_NAME_KEY, bindMarker())
+                .value(TASK_ID_KEY, bindMarker())
+                .value(WORKFLOW_ID_KEY, bindMarker())
+                .value(TASK_IN_PROG_STATUS_KEY, bindMarker())
+                .getQueryString();
+    }
+    public String getSelectTaskInProgressStatement() {
+        return QueryBuilder.select()
+                .countAll()
+                .from(keyspace, TABLE_TASK_IN_PROGRESS)
+                .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
+                .and(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
+
+
+    public String getUpdateTaskInProgressStatement() {
+        return QueryBuilder.update(keyspace, TABLE_TASK_IN_PROGRESS)
+                .with(set(TASK_IN_PROG_STATUS_KEY, bindMarker()))
+                .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
+                .and(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
+
+    public String getDeleteTaskInProgressStatement() {
+        return QueryBuilder.delete()
+                .from(keyspace, TABLE_TASK_IN_PROGRESS)
+                .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
+                .and(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
 
     /**
      * @return cql query statement to retrieve the total_tasks and total_partitions for a workflow
