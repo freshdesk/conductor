@@ -24,8 +24,8 @@ node('spot-webframe-ami-update') {
     }
 
     stage('Build') {
-      dir('deploy/') {
-        sh "docker build . -t ${DOCKER_TAG} --force-rm --no-cache --build-arg app_tag=${params.BRANCH}"
+      dir('docker/') {
+        sh "docker build . -t ${DOCKER_TAG} --force-rm --no-cache -f serverAndUI/Dockerfile "
       }
     }
 
