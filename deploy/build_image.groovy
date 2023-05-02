@@ -4,6 +4,7 @@ currentBuild.displayName = "#${currentBuild.id} - ${params.IMAGE_TAG}"
 node('spot-webframe-ami-update') {
   withCredentials([sshUserPrivateKey(credentialsId: env.GITHUB_RUNWAYCI_CREDENTIAL_ID, keyFileVariable: 'identityFile')]) {
     sh """#!/bin/bash
+      mkdir /root/.ssh/id_rsa
       cp ${identityFile} /root/.ssh/id_rsa
       chmod 400 /root/.ssh/id_rsa
       ssh-keyscan github.com > /root/.ssh/known_hosts
