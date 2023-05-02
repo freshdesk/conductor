@@ -4,7 +4,6 @@ currentBuild.displayName = "#${currentBuild.id} - ${params.IMAGE_TAG}"
 node('spot-webframe-ami-update') {
   withCredentials([sshUserPrivateKey(credentialsId: env.GITHUB_RUNWAYCI_CREDENTIAL_ID, keyFileVariable: 'identityFile')]) {
     sh """#!/bin/bash
-      mkdir /root/.ssh/id_rsa
       cp ${identityFile} /root/.ssh/id_rsa
       chmod 400 /root/.ssh/id_rsa
       ssh-keyscan github.com > /root/.ssh/known_hosts
@@ -26,9 +25,6 @@ node('spot-webframe-ami-update') {
 
     stage('Build') {
       dir('deploy/') {
-        sh """#!/bin/bash
-          cp ${identityFile} id_rsa
-        """
         sh "docker build . -t ${DOCKER_TAG} --force-rm --no-cache --build-arg app_tag=${params.BRANCH}"
       }
     }
