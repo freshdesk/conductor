@@ -25,7 +25,7 @@ node('spot-webframe-ami-update') {
 
     stage('Build') {
       dir('docker/') {
-        sh "docker build -t ${DOCKER_TAG} --force-rm --no-cache -f docker/serverAndUI/Dockerfile ../"
+        sh "docker build -t ${DOCKER_TAG} --force-rm --no-cache -f serverAndUI/Dockerfile ../"
       }
     }
 
