@@ -33,4 +33,4 @@ if [ -z "$CONFIG_PROP" ];
     export config_file=/app/config/$CONFIG_PROP
 fi
 
-nohup java -jar -DCONDUCTOR_CONFIG_FILE=$config_file conductor-server-*-boot.jar 1>&2 > /app/logs/server.log
+java -jar -DCONDUCTOR_CONFIG_FILE=$config_file conductor-server-*-boot.jar
