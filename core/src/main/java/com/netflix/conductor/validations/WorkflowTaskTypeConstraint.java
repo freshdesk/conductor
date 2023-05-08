@@ -91,6 +91,9 @@ public @interface WorkflowTaskTypeConstraint {
                 case TaskType.TASK_TYPE_HTTP:
                     valid = isHttpTaskValid(workflowTask, context);
                     break;
+                case TaskType.TASK_TYPE_API_ACTION:
+                    valid = isApiActionTaskValid(workflowTask, context);
+                    break;
                 case TaskType.TASK_TYPE_FORK_JOIN:
                     valid = isForkJoinTaskValid(workflowTask, context);
                     break;
@@ -380,6 +383,45 @@ public @interface WorkflowTaskTypeConstraint {
                                 PARAM_REQUIRED_STRING_FORMAT,
                                 "inputParameters.http_request",
                                 TaskType.HTTP,
+                                workflowTask.getName());
+                context.buildConstraintViolationWithTemplate(message).addConstraintViolation();
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        private boolean isApiActionTaskValid(
+                WorkflowTask workflowTask, ConstraintValidatorContext context) {
+            boolean valid = true;
+            boolean isInputParameterSet = false;
+            boolean isInputTemplateSet = false;
+
+            // Either http_request in WorkflowTask inputParam should be set or in inputTemplate
+            // Taskdef should be set
+            if (workflowTask.getInputParameters() != null
+                    && workflowTask.getInputParameters().containsKey("http_request")) {
+                isInputParameterSet = true;
+            }
+
+            TaskDef taskDef =
+                    Optional.ofNullable(workflowTask.getTaskDefinition())
+                            .orElse(
+                                    ValidationContext.getMetadataDAO()
+                                            .getTaskDef(workflowTask.getName()));
+
+            if (taskDef != null
+                    && taskDef.getInputTemplate() != null
+                    && taskDef.getInputTemplate().containsKey("http_request")) {
+                isInputTemplateSet = true;
+            }
+
+            if (!(isInputParameterSet || isInputTemplateSet)) {
+                String message =
+                        String.format(
+                                PARAM_REQUIRED_STRING_FORMAT,
+                                "inputParameters.http_request",
+                                TaskType.API_ACTION,
                                 workflowTask.getName());
                 context.buildConstraintViolationWithTemplate(message).addConstraintViolation();
                 valid = false;

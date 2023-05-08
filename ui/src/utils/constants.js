@@ -42,6 +42,7 @@ export const TASK_TYPES = [
   "TITUS",
   "TITUS_TASK",
   "WAIT",
+  "API_ACTION"
 ];
 
 export const SEARCH_TASK_TYPES_SET = modifyTaskTypes(TASK_TYPES);

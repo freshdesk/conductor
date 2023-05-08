@@ -41,7 +41,8 @@ public enum TaskType {
     KAFKA_PUBLISH,
     JSON_JQ_TRANSFORM,
     SET_VARIABLE,
-    MODEL_CHANGES_AGGREGATOR;
+    MODEL_CHANGES_AGGREGATOR,
+    API_ACTION;
 
     /**
      * TaskType constants representing each of the possible enumeration values. Motivation: to not
@@ -71,6 +72,7 @@ public enum TaskType {
     public static final String TASK_TYPE_SET_VARIABLE = "SET_VARIABLE";
     public static final String TASK_TYPE_FORK = "FORK";
     public static final String TASK_TYPE_MODEL_CHANGES_AGGREGATOR = "MODEL_CHANGES_AGGREGATOR";
+    public static final String TASK_TYPE_API_ACTION = "API_ACTION";
 
     private static final Set<String> BUILT_IN_TASKS = new HashSet<>();
 
@@ -81,6 +83,7 @@ public enum TaskType {
         BUILT_IN_TASKS.add(TASK_TYPE_JOIN);
         BUILT_IN_TASKS.add(TASK_TYPE_EXCLUSIVE_JOIN);
         BUILT_IN_TASKS.add(TASK_TYPE_DO_WHILE);
+        BUILT_IN_TASKS.add(TASK_TYPE_API_ACTION);
     }
 
     /**

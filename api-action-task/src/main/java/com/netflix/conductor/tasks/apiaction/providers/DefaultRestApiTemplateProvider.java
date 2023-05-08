@@ -10,11 +10,9 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-package com.netflix.conductor.tasks.http.providers;
+package com.netflix.conductor.tasks.apiaction.providers;
 
-import java.time.Duration;
-import java.util.Optional;
-
+import com.netflix.conductor.tasks.apiaction.ApiActionTask;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -23,14 +21,15 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import com.netflix.conductor.tasks.http.HttpTask;
+import java.time.Duration;
+import java.util.Optional;
 
 /**
  * Provider for a customized RestTemplateBuilder. This class provides a default {@link
  * RestTemplateBuilder} which can be configured or extended as needed.
  */
 @Component
-public class DefaultRestTemplateProvider implements RestTemplateProvider {
+public class DefaultRestApiTemplateProvider implements RestApiTemplateProvider {
 
     private final ThreadLocal<RestTemplate> threadLocalRestTemplate;
 
@@ -38,16 +37,16 @@ public class DefaultRestTemplateProvider implements RestTemplateProvider {
     private final int defaultConnectTimeout;
     // Add this file
     @Autowired
-    public DefaultRestTemplateProvider(
-            @Value("${conductor.tasks.http.readTimeout:150ms}") Duration readTimeout,
-            @Value("${conductor.tasks.http.connectTimeout:100ms}") Duration connectTimeout) {
+    public DefaultRestApiTemplateProvider(
+            @Value("${conductor.tasks.apiAction.readTimeout:150ms}") Duration readTimeout,
+            @Value("${conductor.tasks.apiAction.connectTimeout:100ms}") Duration connectTimeout) {
         this.threadLocalRestTemplate = ThreadLocal.withInitial(RestTemplate::new);
         this.defaultReadTimeout = (int) readTimeout.toMillis();
         this.defaultConnectTimeout = (int) connectTimeout.toMillis();
     }
 
     @Override
-    public @NonNull RestTemplate getRestTemplate(@NonNull HttpTask.Input input) {
+    public @NonNull RestTemplate getRestTemplate(@NonNull ApiActionTask.Input input) {
         RestTemplate restTemplate = threadLocalRestTemplate.get();
         HttpComponentsClientHttpRequestFactory requestFactory =
                 new HttpComponentsClientHttpRequestFactory();
