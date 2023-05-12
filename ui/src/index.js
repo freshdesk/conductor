@@ -22,7 +22,7 @@ ReactDOM.render(
   //<React.StrictMode>
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/workflow-conductor">
         <CssBaseline />
         <ReactQueryDevtools initialIsOpen={true} />
 

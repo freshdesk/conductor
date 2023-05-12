@@ -15,7 +15,7 @@ export function fetchWithContext(
 ) {
   const newParams = { ...fetchParams };
 
-  const newPath = `/api/${path}`;
+  const newPath = `/workflow-conductor/api/${path}`;
   const cleanPath = newPath.replace(/([^:]\/)\/+/g, "$1"); // Cleanup duplicated slashes
 
   return fetch(cleanPath, newParams)
