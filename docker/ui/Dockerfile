@@ -1,17 +1,22 @@
 #
 # conductor:ui - Netflix Conductor UI
 #
-FROM public.ecr.aws/docker/library/node:16.20.2-alpine3.18
+FROM public.ecr.aws/docker/library/node:16.20.2
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
 # Install the required packages for the node build
 # to run on alpine
-RUN apk update && apk add --no-cache python3 py3-pip make g++
+# RUN apt update && apt install -y python3 py3-pip make g++
+
+# Required Packages
+RUN apt install -y procps shadow-utils mysql screen nc
+
+RUN mkdir -p /app
  
 # A directory within the virtualized Docker environment
 # Becomes more relevant when using Docker Compose later
-WORKDIR /usr/src/app
- 
+WORKDIR /app
+
 # Copies package.json to Docker environment in a separate layer as a performance optimization
 COPY ./ui/package.json ./
  
@@ -21,5 +26,13 @@ RUN yarn install
 # Copies everything else over to Docker environment
 # node_modules excluded in .dockerignore. 
 COPY ./ui .
- 
+
+# Creating a new user deploy with group id 3130 and name conductor
+RUN groupadd -g 3130 conductor \
+    && useradd --uid 3130 --home-dir /home/deploy --gid conductor --create-home --no-user-group deploy
+
+RUN chown -R deploy:conductor /app
+
+USER deploy:conductor
+
 CMD [ "yarn", "start" ]
