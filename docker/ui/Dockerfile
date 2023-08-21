@@ -4,13 +4,13 @@
 FROM public.ecr.aws/docker/library/node:16.20.2
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
-RUN apt-get update
+RUN apt update
 # Install the required packages for the node build
 # to run on alpine
 # RUN apt install -y python3 py3-pip make g++
 
 # Required Packages
-RUN apt-get install -y procps shadow-utils mysql screen nc
+RUN apt install -y procps screen default-mysql-client netcat
 
 RUN mkdir -p /app
  
