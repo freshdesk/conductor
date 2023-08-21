@@ -1,7 +1,7 @@
 #
 # conductor:ui - Netflix Conductor UI
 #
-FROM public.ecr.aws/i1i0w6p5/node:14.19.3-alpine
+FROM public.ecr.aws/i1i0w6p5/node:16.15.1
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
 # Install the required packages for the node build
