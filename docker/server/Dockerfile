@@ -12,7 +12,7 @@ LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 # Copy the project directly onto the image
 COPY . /conductor
 WORKDIR /conductor
-
+RUN ls -l
 # Build the server on run
 RUN ./gradlew build -x test --stacktrace
 
