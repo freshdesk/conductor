@@ -19,7 +19,11 @@ import com.datastax.driver.core.Session;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.cassandra.config.cache.CacheableEventHandlerDAO;
 import com.netflix.conductor.cassandra.config.cache.CacheableMetadataDAO;
-import com.netflix.conductor.cassandra.dao.*;
+import com.netflix.conductor.cassandra.dao.CassandraEventHandlerDAO;
+import com.netflix.conductor.cassandra.dao.CassandraExecutionDAO;
+import com.netflix.conductor.cassandra.dao.CassandraMetadataDAO;
+import com.netflix.conductor.cassandra.dao.CassandraPollDataDAO;
+import com.netflix.conductor.cassandra.dao.CassandraRateLimitingDAO;
 import com.netflix.conductor.cassandra.util.Statements;
 import com.netflix.conductor.dao.EventHandlerDAO;
 import com.netflix.conductor.dao.ExecutionDAO;
@@ -51,6 +55,7 @@ public class CassandraConfiguration {
                 .withoutJMXReporting()
                 .withProtocolVersion(ProtocolVersion.V3)
                 .addContactPoint(host)
+                .withCredentials(properties.getUserName(), properties.getPassword())
                 .withPort(port).build();
 
         Metadata metadata = cluster.getMetadata();
