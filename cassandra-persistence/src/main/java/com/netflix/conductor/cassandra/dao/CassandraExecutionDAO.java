@@ -57,6 +57,14 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     protected final PreparedStatement selectWorkflowStatement;
     protected final PreparedStatement selectWorkflowWithTasksStatement;
     protected final PreparedStatement selectTaskLookupStatement;
+    protected final PreparedStatement selectShardFromTaskLookupStatement;
+
+    protected final PreparedStatement selectWorkflowsByCorIdFromWorkflowStatement;
+
+    protected final PreparedStatement selectCountFromTaskInProgressStatement;
+    protected final PreparedStatement selectShardFromWorkflowLookupStatement;
+    protected final PreparedStatement updateWorkflowLookupStatement;
+    protected final PreparedStatement deleteWorkflowLookupStatement;
     protected final PreparedStatement selectTasksFromTaskDefLimitStatement;
     protected final PreparedStatement selectEventExecutionsStatement;
 
@@ -101,6 +109,30 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
 
         this.selectTaskInProgressStatement =
                 session.prepare(statements.getSelectTaskInProgressStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.selectShardFromTaskLookupStatement =
+                session.prepare(statements.getSelectShardFromTaskLookupTableStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.selectCountFromTaskInProgressStatement =
+                session.prepare(statements.getSelectCountTaskInProgressPerTskDefStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.selectWorkflowsByCorIdFromWorkflowStatement =
+                session.prepare(statements.getSelectWorkflowsByCorrelationIdStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.selectShardFromWorkflowLookupStatement =
+                session.prepare(statements.getSelectShardFromWorkflowLookupTableStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.updateWorkflowLookupStatement =
+                session.prepare(statements.getUpdateWorkflowLookupStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+
+        this.deleteWorkflowLookupStatement =
+                session.prepare(statements.getDeleteWorkflowLookupStatement())
                         .setConsistencyLevel(properties.getReadConsistencyLevel());
 
         this.updateTaskInProgressStatement =
@@ -200,12 +232,14 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     public List<TaskModel> createTasks(List<TaskModel> tasks) {
         validateTasks(tasks);
         String workflowId = tasks.get(0).getWorkflowInstanceId();
+        String corelationId = tasks.get(0).getCorrelationId();
         UUID workflowUUID = toUUID(workflowId, "Invalid workflow id");
+        Integer correlationId = Objects.isNull(corelationId) ? 0 : Integer.parseInt(corelationId);
         try {
-            WorkflowMetadata workflowMetadata = getWorkflowMetadata(workflowId);
+            WorkflowMetadata workflowMetadata = getWorkflowMetadata(workflowId,corelationId);
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
-            // TODO: write into multiple shards based on number of tasks
             // update the task_lookup table
+            // update the workflow_lookup table
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
@@ -213,7 +247,10 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                         }
                         session.execute(
                                 updateTaskLookupStatement.bind(
-                                        workflowUUID, toUUID(task.getTaskId(), "Invalid task id")));
+                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        session.execute(
+                                updateWorkflowLookupStatement.bind(
+                                        correlationId, workflowUUID));
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
@@ -226,9 +263,10 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                         batchStatement.add(
                                 insertTaskStatement.bind(
                                         workflowUUID,
-                                        DEFAULT_SHARD_ID,
+                                        correlationId,
                                         task.getTaskId(),
                                         taskPayload));
+
                         recordCassandraDaoRequests(
                                 "createTask", task.getTaskType(), task.getWorkflowType());
 
@@ -241,13 +279,12 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
 
                     });
             batchStatement.add(
-                    updateTotalTasksStatement.bind(totalTasks, workflowUUID, DEFAULT_SHARD_ID));
+                    updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
             session.execute(batchStatement);
-
             // update the total tasks and partitions for the workflow
             session.execute(
                     updateTotalPartitionsStatement.bind(
-                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID));
+                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
 
             return tasks;
         } catch (DriverException e) {
@@ -261,46 +298,38 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     }
 
     public void addTaskInProgress(TaskModel task) {
-        LOGGER.info("Inside addTaskInProgress wth TaskModel {}", task.toString());
         ResultSet resultSet =
                 session.execute(
                         selectTaskInProgressStatement.bind(task.getTaskDefName(),
                                 UUID.fromString(task.getTaskId())));
-        LOGGER.info("Received resultset is {}", resultSet.all().toString());
-       /* List<String> taskIds =
-                resultSet.all().stream()
-                        .map(row -> row.getUUID(TASK_ID_KEY).toString())
-                        .collect(Collectors.toList());*/
-
-        if (resultSet.all().size()<1)
-            LOGGER.info("Insert for task_in_progress {}", task.toString());
+        if (resultSet.all().isEmpty() || resultSet.all().size()<1) {
             session.execute(
                     insertTaskInProgressStatement.bind(task.getTaskDefName(),
                             UUID.fromString(task.getTaskId()),
                             UUID.fromString(task.getWorkflowInstanceId()),
                             true));
+        }
+        else {
+            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
+                    ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
+        }
 
     }
 
     public void removeTaskInProgress(TaskModel task) {
-        LOGGER.info("Remove for task_in_progress {}", task.toString());
         session.execute(
-                deleteTaskInProgressStatement.bind(task.getTaskDefName(),task.getTaskId(),task.getWorkflowInstanceId()));
-        LOGGER.info("Removed for task_in_progress {}", task.toString());
-
+                deleteTaskInProgressStatement.bind(task.getTaskDefName(),UUID.fromString(task.getTaskId())));
     }
 
     public void updateTaskInProgress(TaskModel task, boolean inProgress) {
-        LOGGER.info("Update for task_in_progress {}", task.toString());
         session.execute(
-                updateTaskInProgressStatement.bind(inProgress,task.getTaskDefName(),task.getTaskId(),task.getWorkflowInstanceId()));
-        LOGGER.info("Updated for task_in_progress {}", task.toString());
+                updateTaskInProgressStatement.bind(inProgress,task.getTaskDefName(),UUID.fromString(task.getTaskId())));
     }
 
     @Override
     public void updateTask(TaskModel task) {
         try {
-            // TODO: calculate the shard number the task belongs to
+            Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
             String taskPayload = toJson(task);
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
             recordCassandraDaoPayloadSize(
@@ -308,24 +337,10 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
             session.execute(
                     insertTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
-                            DEFAULT_SHARD_ID,
+                            correlationId,
                             task.getTaskId(),
                             taskPayload));
-            boolean inProgress =
-                    task.getStatus() != null
-                            && task.getStatus().equals(TaskModel.Status.IN_PROGRESS);
-            LOGGER.info("Called to update for task_in_progress status {}", inProgress);
-            if (task.getTaskDefinition().isPresent()
-                    && task.getTaskDefinition().get().concurrencyLimit() > 0) {
-                LOGGER.info("Inside getTaskDefinition to update for task_in_progress status {}", inProgress);
-                updateTaskInProgress( task,  inProgress);
-                if (task.getStatus().isTerminal()) {
-                    removeTaskFromLimit(task);
-                    removeTaskInProgress(task);
-                } else if (task.getStatus() == TaskModel.Status.IN_PROGRESS) {
-                    addTaskToLimit(task);
-                }
-            }
+            verifyTaskStatus(task);
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateTask");
             String errorMsg =
@@ -335,6 +350,19 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
+    }
+
+    private void verifyTaskStatus(TaskModel task) {
+        boolean inProgress =
+                task.getStatus() != null
+                        && task.getStatus().equals(TaskModel.Status.IN_PROGRESS);
+            updateTaskInProgress( task,  inProgress);
+            if (task.getStatus().isTerminal()) {
+                removeTaskFromLimit(task);
+                removeTaskInProgress(task);
+            } else if (task.getStatus() == TaskModel.Status.IN_PROGRESS) {
+                addTaskToLimit(task);
+            }
     }
 
     /**
@@ -400,6 +428,8 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     public TaskModel getTask(String taskId) {
         try {
             String workflowId = lookupWorkflowIdFromTaskId(taskId);
+            String shardId = lookupShardIdFromTaskId(taskId);
+            Integer correlationId = Objects.isNull(shardId) ? 0 : Integer.parseInt(shardId);
             if (workflowId == null) {
                 return null;
             }
@@ -408,7 +438,7 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
             ResultSet resultSet =
                     session.execute(
                             selectTaskStatement.bind(
-                                    UUID.fromString(workflowId), DEFAULT_SHARD_ID, taskId));
+                                    UUID.fromString(workflowId), correlationId, taskId));
             return Optional.ofNullable(resultSet.one())
                     .map(
                             row -> {
@@ -466,13 +496,17 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
             List<TaskModel> tasks = workflow.getTasks();
             workflow.setTasks(new LinkedList<>());
             String payload = toJson(workflow);
-
+            Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
+            LOGGER.info(
+                    "Correlation ID for workflow {} is {}",
+                    workflow.getWorkflowId(),
+                    correlationId);
             recordCassandraDaoRequests("createWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "createWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
             session.execute(
                     insertWorkflowStatement.bind(
-                            UUID.fromString(workflow.getWorkflowId()), 1, "", payload, 0, 1));
+                            UUID.fromString(workflow.getWorkflowId()), correlationId, "", payload, 0, 1));
 
             workflow.setTasks(tasks);
             return workflow.getWorkflowId();
@@ -489,6 +523,7 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     public String updateWorkflow(WorkflowModel workflow) {
         try {
             List<TaskModel> tasks = workflow.getTasks();
+            Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
             workflow.setTasks(new LinkedList<>());
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
@@ -496,7 +531,7 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
             session.execute(
                     updateWorkflowStatement.bind(
-                            payload, UUID.fromString(workflow.getWorkflowId())));
+                            payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
             workflow.setTasks(tasks);
             return workflow.getWorkflowId();
         } catch (DriverException e) {
@@ -511,15 +546,15 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     @Override
     public boolean removeWorkflow(String workflowId) {
         WorkflowModel workflow = getWorkflow(workflowId, true);
+        Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
         boolean removed = false;
-        // TODO: calculate number of shards and iterate
         if (workflow != null) {
             try {
                 recordCassandraDaoRequests("removeWorkflow", "n/a", workflow.getWorkflowName());
                 ResultSet resultSet =
                         session.execute(
                                 deleteWorkflowStatement.bind(
-                                        UUID.fromString(workflowId), DEFAULT_SHARD_ID));
+                                        UUID.fromString(workflowId), correlationId));
                 removed = resultSet.wasApplied();
             } catch (DriverException e) {
                 Monitors.error(CLASS_NAME, "removeWorkflow");
@@ -560,6 +595,9 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     @Override
     public WorkflowModel getWorkflow(String workflowId, boolean includeTasks) {
         UUID workflowUUID = toUUID(workflowId, "Invalid workflow id");
+        String shardId = lookupShardIdFromWorkflowId(workflowId);
+        Integer correlationId = Objects.isNull(shardId) ? 0 : Integer.parseInt(shardId);
+
         try {
             WorkflowModel workflow = null;
             ResultSet resultSet;
@@ -567,7 +605,7 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                 resultSet =
                         session.execute(
                                 selectWorkflowWithTasksStatement.bind(
-                                        workflowUUID, DEFAULT_SHARD_ID));
+                                        workflowUUID, correlationId));
                 List<TaskModel> tasks = new ArrayList<>();
 
                 List<Row> rows = resultSet.all();
@@ -596,7 +634,7 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                     workflow.setTasks(tasks);
                 }
             } else {
-                resultSet = session.execute(selectWorkflowStatement.bind(workflowUUID));
+                resultSet = session.execute(selectWorkflowStatement.bind(workflowUUID, correlationId));
                 workflow =
                         Optional.ofNullable(resultSet.one())
                                 .map(
@@ -656,8 +694,18 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
      */
     @Override
     public long getInProgressTaskCount(String taskDefName) {
-        throw new UnsupportedOperationException(
-                "This method is not implemented in CassandraExecutionDAO. Please use ExecutionDAOFacade instead.");
+        try{
+            ResultSet resultSet;
+            recordCassandraDaoRequests("getInProgressTaskCount", "n/a", taskDefName);
+            resultSet = session.execute(selectCountFromTaskInProgressStatement.bind(taskDefName));
+            return resultSet.all().size();
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "getInProgressTaskCount");
+            String errorMsg =
+                    String.format("Failed to retrieve task-in-progress coount from taskDefName: %s", taskDefName);
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg);
+        }
     }
 
     /**
@@ -678,13 +726,35 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     @Override
     public List<WorkflowModel> getWorkflowsByCorrelationId(
             String workflowName, String correlationId, boolean includeTasks) {
-        throw new UnsupportedOperationException(
-                "This method is not implemented in CassandraExecutionDAO. Please use ExecutionDAOFacade instead.");
+        try{
+            ResultSet resultSet;
+            recordCassandraDaoRequests("getWorkflowsByCorrelationId", "n/a", correlationId);
+
+            resultSet = session.execute(selectWorkflowsByCorIdFromWorkflowStatement.bind(Integer.parseInt(correlationId)));
+            List<WorkflowModel> wfList = resultSet.all().stream()
+                    .map(row -> {
+                        WorkflowModel wf =
+                                readValue(
+                                        row.getString(PAYLOAD_KEY),
+                                        WorkflowModel.class);
+                        recordCassandraDaoRequests(
+                                "getWorkflowsByCorrelationId", "n/a", wf.getWorkflowName());
+                        return wf;
+                    })
+                    .collect(Collectors.toList());
+        return wfList;
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "getWorkflowsByCorrelationId");
+            String errorMsg =
+                    String.format("Failed to retrieve workflows from correlationId: %s", correlationId);
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg);
+        }
     }
 
     @Override
     public boolean canSearchAcrossWorkflows() {
-        return false;
+        return true;
     }
 
     @Override
@@ -822,11 +892,16 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         // TODO: calculate shard number based on seq and maxTasksPerShard
         try {
             // get total tasks for this workflow
-            WorkflowMetadata workflowMetadata = getWorkflowMetadata(task.getWorkflowInstanceId());
+            WorkflowMetadata workflowMetadata = getWorkflowMetadata(task.getWorkflowInstanceId(),
+                    task.getCorrelationId());
+            Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
             int totalTasks = workflowMetadata.getTotalTasks();
 
             // remove from task_lookup table
             removeTaskLookup(task);
+
+            // remove the task from task_in_progress table
+            removeTaskInProgress(task);
 
             recordCassandraDaoRequests("removeTask", task.getTaskType(), task.getWorkflowType());
             // delete task from workflows table and decrement total tasks by 1
@@ -834,13 +909,13 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
             batchStatement.add(
                     deleteTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
-                            DEFAULT_SHARD_ID,
+                            correlationId,
                             task.getTaskId()));
             batchStatement.add(
                     updateTotalTasksStatement.bind(
                             totalTasks - 1,
                             UUID.fromString(task.getWorkflowInstanceId()),
-                            DEFAULT_SHARD_ID));
+                            correlationId));
             ResultSet resultSet = session.execute(batchStatement);
             if (task.getTaskDefinition().isPresent()
                     && task.getTaskDefinition().get().concurrencyLimit() > 0) {
@@ -864,6 +939,7 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
                 removeTaskFromLimit(task);
             }
             session.execute(deleteTaskLookupStatement.bind(UUID.fromString(task.getTaskId())));
+            session.execute(deleteWorkflowLookupStatement.bind(UUID.fromString(task.getWorkflowInstanceId())));
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "removeTaskLookup");
             String errorMsg = String.format("Failed to remove task lookup: %s", task.getTaskId());
@@ -898,9 +974,10 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     }
 
     @VisibleForTesting
-    WorkflowMetadata getWorkflowMetadata(String workflowId) {
+    WorkflowMetadata getWorkflowMetadata(String workflowId, String correlationId) {
+        Integer corelId = Objects.isNull(correlationId) ? 0 : Integer.parseInt(correlationId);
         ResultSet resultSet =
-                session.execute(selectTotalStatement.bind(UUID.fromString(workflowId)));
+                session.execute(selectTotalStatement.bind(UUID.fromString(workflowId),corelId));
         recordCassandraDaoRequests("getWorkflowMetadata");
         return Optional.ofNullable(resultSet.one())
                 .map(
@@ -928,6 +1005,41 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "lookupWorkflowIdFromTaskId");
             String errorMsg = String.format("Failed to lookup workflowId from taskId: %s", taskId);
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
+    }
+
+    @VisibleForTesting
+    String lookupShardIdFromTaskId(String taskId) {
+        UUID taskUUID = toUUID(taskId, "Invalid task id");
+        try {
+            ResultSet resultSet = session.execute(selectShardFromTaskLookupStatement.bind(taskUUID));
+            return Optional.ofNullable(resultSet.one())
+                    .map(row -> String.valueOf(row.getInt(SHARD_ID_KEY)))
+                    .orElse(null);
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "lookupShardIdFromTaskId");
+            String errorMsg = String.format("Failed to lookup shardId from taskId: %s", taskId);
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
+    }
+
+    @VisibleForTesting
+    String lookupShardIdFromWorkflowId(String workflowId) {
+        UUID workflowUUID = toUUID(workflowId, "Invalid workflow id");
+        try {
+            ResultSet resultSet = session.execute(selectShardFromWorkflowLookupStatement.bind(workflowUUID));
+
+            return Optional.ofNullable(resultSet.one())
+                    .map(row -> {
+                        return String.valueOf(row.getInt(SHARD_ID_KEY));
+                    })
+                    .orElse(null);
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "lookupShardIdFromWorkflowId");
+            String errorMsg = String.format("Failed to lookup shardId from workflowId: %s", workflowId);
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }

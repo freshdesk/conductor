@@ -101,6 +101,8 @@ public abstract class CassandraBaseDAO {
                 session.execute(getCreateTaskDefsTableStatement());
                 //Added task_in_progress
                 session.execute(getCreateTaskInProgressTableStatement());
+                //Added work
+                session.execute(getCreateWorkflowLookupTableStatement());
                 session.execute(getCreateEventHandlersTableStatement());
                 session.execute(getCreateEventExecutionsTableStatement());
                 LOGGER.info(
@@ -144,7 +146,16 @@ public abstract class CassandraBaseDAO {
         return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_LOOKUP)
                 .ifNotExists()
                 .addPartitionKey(TASK_ID_KEY, DataType.uuid())
+                .addColumn(SHARD_ID_KEY,DataType.cint())
                 .addColumn(WORKFLOW_ID_KEY, DataType.uuid())
+                .getQueryString();
+    }
+
+    private String getCreateWorkflowLookupTableStatement() {
+        return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_WORKFLOW_LOOKUP)
+                .ifNotExists()
+                .addPartitionKey(WORKFLOW_ID_KEY, DataType.uuid())
+                .addColumn(SHARD_ID_KEY,DataType.cint())
                 .getQueryString();
     }
 
