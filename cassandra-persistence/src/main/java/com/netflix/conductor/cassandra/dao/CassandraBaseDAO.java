@@ -101,7 +101,7 @@ public abstract class CassandraBaseDAO {
                 session.execute(getCreateTaskDefsTableStatement());
                 //Added task_in_progress
                 session.execute(getCreateTaskInProgressTableStatement());
-                //Added work
+                //Added workflow_lookup
                 session.execute(getCreateWorkflowLookupTableStatement());
                 session.execute(getCreateEventHandlersTableStatement());
                 session.execute(getCreateEventExecutionsTableStatement());
@@ -151,6 +151,9 @@ public abstract class CassandraBaseDAO {
                 .getQueryString();
     }
 
+    /**
+     * @return cql statement to create workflow_lookup table for shard_mapping
+     */
     private String getCreateWorkflowLookupTableStatement() {
         return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_WORKFLOW_LOOKUP)
                 .ifNotExists()
@@ -195,6 +198,9 @@ public abstract class CassandraBaseDAO {
                 .getQueryString();
     }
 
+    /**
+     * @return cql statement to create task_in_progress table for tasks stats identification
+     */
     private String getCreateTaskInProgressTableStatement() {
         return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_IN_PROGRESS)
                 .ifNotExists()

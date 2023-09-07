@@ -297,6 +297,9 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         }
     }
 
+    /**
+     * @method to add the task_in_progress table with the status of the task if task is not already present
+     */
     public void addTaskInProgress(TaskModel task) {
         ResultSet resultSet =
                 session.execute(
@@ -316,11 +319,17 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
 
     }
 
+    /**
+     * @method to remove the task_in_progress table with the status of the task
+     */
     public void removeTaskInProgress(TaskModel task) {
         session.execute(
                 deleteTaskInProgressStatement.bind(task.getTaskDefName(),UUID.fromString(task.getTaskId())));
     }
 
+    /**
+     * @method to update the task_in_progress table with the status of the task
+     */
     public void updateTaskInProgress(TaskModel task, boolean inProgress) {
         session.execute(
                 updateTaskInProgressStatement.bind(inProgress,task.getTaskDefName(),UUID.fromString(task.getTaskId())));
@@ -352,6 +361,10 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         }
     }
 
+    /**
+     *  @method to verify the task status and update the task_in_progress table
+     *  also removes if its a terminal task
+     */
     private void verifyTaskStatus(TaskModel task) {
         boolean inProgress =
                 task.getStatus() != null
@@ -689,15 +702,13 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     }
 
     /**
-     * This is a dummy implementation and this feature is not implemented for Cassandra backed
-     * Conductor
+     * This is used to retrieve the total number of tasks in progress for a given task definition
      */
     @Override
     public long getInProgressTaskCount(String taskDefName) {
         try{
-            ResultSet resultSet;
             recordCassandraDaoRequests("getInProgressTaskCount", "n/a", taskDefName);
-            resultSet = session.execute(selectCountFromTaskInProgressStatement.bind(taskDefName));
+            ResultSet resultSet = session.execute(selectCountFromTaskInProgressStatement.bind(taskDefName));
             return resultSet.all().size();
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "getInProgressTaskCount");
@@ -720,17 +731,15 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
     }
 
     /**
-     * This is a dummy implementation and this feature is not implemented for Cassandra backed
-     * Conductor
+     * This is to get the list of workflows based on correlationId.
      */
     @Override
     public List<WorkflowModel> getWorkflowsByCorrelationId(
             String workflowName, String correlationId, boolean includeTasks) {
         try{
-            ResultSet resultSet;
             recordCassandraDaoRequests("getWorkflowsByCorrelationId", "n/a", correlationId);
 
-            resultSet = session.execute(selectWorkflowsByCorIdFromWorkflowStatement.bind(Integer.parseInt(correlationId)));
+            ResultSet resultSet = session.execute(selectWorkflowsByCorIdFromWorkflowStatement.bind(Integer.parseInt(correlationId)));
             List<WorkflowModel> wfList = resultSet.all().stream()
                     .map(row -> {
                         WorkflowModel wf =
@@ -1010,6 +1019,9 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         }
     }
 
+    /**
+     * @return method to get the shardId from task_lookup table for shard_mapping
+     */
     @VisibleForTesting
     String lookupShardIdFromTaskId(String taskId) {
         UUID taskUUID = toUUID(taskId, "Invalid task id");
@@ -1026,6 +1038,9 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         }
     }
 
+    /**
+     * @return method to get the shardId from workflow_lookup table for shard_mapping
+     */
     @VisibleForTesting
     String lookupShardIdFromWorkflowId(String workflowId) {
         UUID workflowUUID = toUUID(workflowId, "Invalid workflow id");
