@@ -35,6 +35,12 @@ public class CassandraProperties {
     /** The keyspace to be used in the cassandra datastore */
     private String keyspace = "conductor";
 
+    /** The username to be used in the cassandra */
+    private String userName = "cassandra";
+
+    /** The password to be used in the cassandra */
+    private String password = "cassandra";
+
     /**
      * The number of tasks to be stored in a single partition which will be used for sharding
      * workflows in the datastore
@@ -122,6 +128,22 @@ public class CassandraProperties {
 
     public void setReplicationFactorKey(String replicationFactorKey) {
         this.replicationFactorKey = replicationFactorKey;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public int getReplicationFactorValue() {
