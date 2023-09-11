@@ -5,7 +5,7 @@
 # ===========================================================================================================
 # 0. Builder stage
 # ===========================================================================================================
-FROM eclipse-temurin:11-jdk-focal AS builder
+FROM public.ecr.aws/i1i0w6p5/amazoncorretto:11 AS builder
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
@@ -19,7 +19,7 @@ RUN ./gradlew build -x test --stacktrace
 # ===========================================================================================================
 # 1. Bin stage
 # ===========================================================================================================
-FROM eclipse-temurin:11-jre-focal 
+FROM public.ecr.aws/i1i0w6p5/amazoncorretto:11
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
@@ -31,10 +31,19 @@ COPY --from=builder /conductor/docker/server/bin /app
 COPY --from=builder /conductor/docker/server/config /app/config
 COPY --from=builder /conductor/server/build/libs/conductor-server-*-boot.jar /app/libs
 
-# Copy the files for the server into the app folders
-RUN chmod +x /app/startup.sh
+# Required Packages
+RUN yum install -y procps shadow-utils mysql screen nc
 
-HEALTHCHECK --interval=60s --timeout=30s --retries=10 CMD curl -I -XGET http://localhost:8080/health || exit 1
+# Creating a new user deploy with group id 3130 and name conductor
+RUN groupadd -g 3130 conductor \
+    && useradd --uid 3130 --home-dir /home/deploy --gid conductor --create-home --no-user-group deploy
+
+RUN chown -R deploy:conductor /app
+
+USER deploy:conductor
+
+#Using k8s readiness probe. So docker healthcheck not needed
+#HEALTHCHECK --interval=60s --timeout=30s --retries=10 CMD curl -I -XGET http://localhost:8080/health || exit 1
 
 CMD [ "/app/startup.sh" ]
 ENTRYPOINT [ "/bin/sh"]
