@@ -10,7 +10,7 @@ RUN apt update
 # RUN apt install -y python3 py3-pip make g++
 
 # Required Packages
-RUN apt install -y procps screen default-mysql-client netcat
+RUN apt install -y procps screen default-mysql-client ncat
 
 RUN mkdir -p /app
  
