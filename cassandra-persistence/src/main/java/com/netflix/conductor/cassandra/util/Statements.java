@@ -297,6 +297,23 @@ public class Statements {
     }
 
     // Select Statements
+
+    /**
+     * @return cql query statement to retrieve all workflows executions from the "workflows"
+     *     table by coorelationId
+     */
+    public String getSelectWorkflowsByCorrelationIdStatement() {
+        return QueryBuilder.select(PAYLOAD_KEY)
+                .from(keyspace, TABLE_WORKFLOWS)
+                .where(eq(SHARD_ID_KEY, bindMarker()))
+                .and(eq(ENTITY_KEY, ENTITY_TYPE_WORKFLOW))
+                .allowFiltering()
+                .getQueryString();
+    }
+
+    /**
+     * @return cql query statement to insert tasks to task_in_progress table
+     */
     public String getInsertTaskInProgressStatement() {
         return QueryBuilder.insertInto(keyspace, TABLE_TASK_IN_PROGRESS)
                 .value(TASK_DEF_NAME_KEY, bindMarker())
@@ -305,6 +322,11 @@ public class Statements {
                 .value(TASK_IN_PROG_STATUS_KEY, bindMarker())
                 .getQueryString();
     }
+
+    /**
+     * @return cql query statement to retrieve all the tasks count from task_in_progress table
+     * per taskDefName and task_id
+     */
     public String getSelectTaskInProgressStatement() {
         return QueryBuilder.select()
                 .countAll()
@@ -314,7 +336,21 @@ public class Statements {
                 .getQueryString();
     }
 
+    /**
+     * @return cql query statement to retrieve all the tasks count from task_in_progress table per taskDefName
+     */
+    public String getSelectCountTaskInProgressPerTskDefStatement() {
+        return QueryBuilder.select()
+                .countAll()
+                .from(keyspace, TABLE_TASK_IN_PROGRESS)
+                .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
+                .getQueryString();
+    }
 
+    /**
+     * @return cql query statement to update the task in task_in_progress table per taskDefName
+     * and task_id
+     */
     public String getUpdateTaskInProgressStatement() {
         return QueryBuilder.update(keyspace, TABLE_TASK_IN_PROGRESS)
                 .with(set(TASK_IN_PROG_STATUS_KEY, bindMarker()))
@@ -323,6 +359,10 @@ public class Statements {
                 .getQueryString();
     }
 
+    /**
+     * @return cql query statement to delete the task in task_in_progress table per taskDefName
+     * and task_id
+     */
     public String getDeleteTaskInProgressStatement() {
         return QueryBuilder.delete()
                 .from(keyspace, TABLE_TASK_IN_PROGRESS)
@@ -339,7 +379,7 @@ public class Statements {
         return QueryBuilder.select(TOTAL_TASKS_KEY, TOTAL_PARTITIONS_KEY)
                 .from(keyspace, TABLE_WORKFLOWS)
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
-                .and(eq(SHARD_ID_KEY, 1))
+                .and(eq(SHARD_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 
@@ -364,7 +404,7 @@ public class Statements {
         return QueryBuilder.select(PAYLOAD_KEY)
                 .from(keyspace, TABLE_WORKFLOWS)
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
-                .and(eq(SHARD_ID_KEY, 1))
+                .and(eq(SHARD_ID_KEY, bindMarker()))
                 .and(eq(ENTITY_KEY, ENTITY_TYPE_WORKFLOW))
                 .getQueryString();
     }
@@ -389,6 +429,28 @@ public class Statements {
         return QueryBuilder.select(WORKFLOW_ID_KEY)
                 .from(keyspace, TABLE_TASK_LOOKUP)
                 .where(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
+
+    /**
+     * @return cql query statement to retrieve the shard_id for a particular task_id from the
+     *     "task_lookup" table
+     */
+    public String getSelectShardFromTaskLookupTableStatement() {
+        return QueryBuilder.select(SHARD_ID_KEY)
+                .from(keyspace, TABLE_TASK_LOOKUP)
+                .where(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
+
+    /**
+     * @return cql query statement to retrieve the shard_id for a particular workflow_id  from the
+     *     "workflow_lookup" table
+     */
+    public String getSelectShardFromWorkflowLookupTableStatement() {
+        return QueryBuilder.select(SHARD_ID_KEY)
+                .from(keyspace, TABLE_WORKFLOW_LOOKUP)
+                .where(eq(WORKFLOW_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 
@@ -426,7 +488,7 @@ public class Statements {
         return QueryBuilder.update(keyspace, TABLE_WORKFLOWS)
                 .with(set(PAYLOAD_KEY, bindMarker()))
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
-                .and(eq(SHARD_ID_KEY, 1))
+                .and(eq(SHARD_ID_KEY, bindMarker()))
                 .and(eq(ENTITY_KEY, ENTITY_TYPE_WORKFLOW))
                 .and(eq(TASK_ID_KEY, ""))
                 .getQueryString();
@@ -453,7 +515,7 @@ public class Statements {
                 .with(set(TOTAL_PARTITIONS_KEY, bindMarker()))
                 .and(set(TOTAL_TASKS_KEY, bindMarker()))
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
-                .and(eq(SHARD_ID_KEY, 1))
+                .and(eq(SHARD_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 
@@ -464,7 +526,19 @@ public class Statements {
     public String getUpdateTaskLookupStatement() {
         return QueryBuilder.update(keyspace, TABLE_TASK_LOOKUP)
                 .with(set(WORKFLOW_ID_KEY, bindMarker()))
+                .and(set(SHARD_ID_KEY, bindMarker()))
                 .where(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
+
+    /**
+     * @return cql query statement to update shard_id to workflow_id mapping to the "workflow_lookup"
+     *     table
+     */
+    public String getUpdateWorkflowLookupStatement() {
+        return QueryBuilder.update(keyspace, TABLE_WORKFLOW_LOOKUP)
+                .with(set(SHARD_ID_KEY, bindMarker()))
+                .where(eq(WORKFLOW_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 
@@ -513,6 +587,17 @@ public class Statements {
         return QueryBuilder.delete()
                 .from(keyspace, TABLE_TASK_LOOKUP)
                 .where(eq(TASK_ID_KEY, bindMarker()))
+                .getQueryString();
+    }
+
+    /**
+     * @return cql query statement to delete a workflow_lookup entry from the "workflow_lookup"
+     *     table
+     */
+    public String getDeleteWorkflowLookupStatement() {
+        return QueryBuilder.delete()
+                .from(keyspace, TABLE_WORKFLOW_LOOKUP)
+                .where(eq(WORKFLOW_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 

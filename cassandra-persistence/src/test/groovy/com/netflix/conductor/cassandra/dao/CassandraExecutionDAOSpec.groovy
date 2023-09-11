@@ -151,6 +151,7 @@ class CassandraExecutionDAOSpec extends CassandraSpec {
         def foundId1 = executionDAO.lookupWorkflowIdFromTaskId(task1.taskId)
         def foundId2 = executionDAO.lookupWorkflowIdFromTaskId(task2.taskId)
         def foundId3 = executionDAO.lookupWorkflowIdFromTaskId(task3.taskId)
+        def shardId = executionDAO.lookupShardIdFromTaskId(task1.taskId)
 
         then:
         foundId1 == workflowId
@@ -158,7 +159,7 @@ class CassandraExecutionDAOSpec extends CassandraSpec {
         foundId3 == workflowId
 
         when: 'check the metadata'
-        def workflowMetadata = executionDAO.getWorkflowMetadata(workflowId)
+        def workflowMetadata = executionDAO.getWorkflowMetadata(workflowId, shardId)
 
         then:
         workflowMetadata.totalTasks == 3
@@ -246,7 +247,7 @@ class CassandraExecutionDAOSpec extends CassandraSpec {
 
         then:
         removed
-        def workflowMetadata = executionDAO.getWorkflowMetadata(workflowId)
+        def workflowMetadata = executionDAO.getWorkflowMetadata(workflowId, "0")
         workflowMetadata.totalTasks == 2
         workflowMetadata.totalPartitions == 1
 
@@ -463,7 +464,7 @@ class CassandraExecutionDAOSpec extends CassandraSpec {
         println("Create 1000 tasks, duration: ${System.currentTimeMillis() - start_time} ms")
 
         then:
-        def workflowMetadata = executionDAO.getWorkflowMetadata(workflowId)
+        def workflowMetadata = executionDAO.getWorkflowMetadata(workflowId, "0")
         workflowMetadata.totalTasks == 1000
 
         when: 'read workflow with tasks'
