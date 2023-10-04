@@ -5,7 +5,7 @@
 # ===========================================================================================================
 # 0. Builder stage
 # ===========================================================================================================
-FROM public.ecr.aws/i1i0w6p5/amazoncorretto:11 AS builder
+FROM public.ecr.aws/amazoncorretto/amazoncorretto:11.0.20 AS builder
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
@@ -19,7 +19,7 @@ RUN ./gradlew build -x test --stacktrace
 # ===========================================================================================================
 # 1. Bin stage
 # ===========================================================================================================
-FROM public.ecr.aws/i1i0w6p5/amazoncorretto:11
+FROM public.ecr.aws/amazoncorretto/amazoncorretto:11.0.20
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
