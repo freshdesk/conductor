@@ -1,7 +1,7 @@
 #
 # conductor:ui - Netflix Conductor UI
 #
-FROM public.ecr.aws/docker/library/node:18.17.1
+FROM public.ecr.aws/i1i0w6p5/node:18.17.1
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
 RUN apt update
