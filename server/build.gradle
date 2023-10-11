@@ -20,7 +20,7 @@ dependencies {
     implementation project(':conductor-rest')
     implementation project(':conductor-core')
     implementation project(':conductor-redis-persistence')
-    implementation project(':conductor-cassandra-persistence')
+    implementation project(':conductor-scylla-persistence')
     implementation project(':conductor-es6-persistence')
     implementation project(':conductor-grpc-server')
     implementation project(':conductor-redis-lock')

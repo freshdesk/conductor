@@ -1,0 +1,47 @@
+version: '2.3'
+
+services:
+  conductor-server:
+    environment:
+      - CONFIG_PROP=config-scylla.properties
+
+  scylla:
+    image: scylladb/scylla
+    ports:
+      - '7000:7000'
+      - '9042:9042'
+    healthcheck:
+      test: [ "CMD", "/opt/cassandra/bin/cqlsh", "-u scylla", "-p scylla" ,"-e 'DESCRIBE KEYSPACES;'" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    environment:
+        - SCYLLA_CLUSTER_NAME=scylla_cluster
+        - SCYLLA_SEEDS=scylla
+        - SCYLLA_PASSWORD_SEEDER=yes
+        - SCYLLA_PASSWORD=scylla
+        - SCYLLA_RPC_PORT=7000
+    networks:
+      - internal
+    volumes:
+      - scylla-conductor:/var/lib/scylla/data
+
+  redis:
+    image: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    networks:
+      - internal
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - cache:/data
+
+volumes:
+  scylla-conductor:
+    driver: local
+  cache:
+    driver: local
+
+networks:
+  internal:

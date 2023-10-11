@@ -37,7 +37,7 @@ include 'common'
 include 'core'
 include 'client'
 include 'client-spring'
-
+include 'scylla-persistence'
 include 'cassandra-persistence'
 include 'redis-persistence'
 
