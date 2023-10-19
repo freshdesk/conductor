@@ -11,9 +11,6 @@
         "com.netflix.conductor:conductor-awssqs-event-queue": {
             "project": true
         },
-        "com.netflix.conductor:conductor-cassandra-persistence": {
-            "project": true
-        },
         "com.netflix.conductor:conductor-core": {
             "project": true
         },
@@ -29,6 +26,9 @@
         "com.netflix.conductor:conductor-json-jq-task": {
             "project": true
         },
+        "com.netflix.conductor:conductor-kafka": {
+            "locked": "3.13.3"
+        },
         "com.netflix.conductor:conductor-redis-concurrency-limit": {
             "project": true
         },
@@ -40,6 +40,15 @@
         },
         "com.netflix.conductor:conductor-rest": {
             "project": true
+        },
+        "com.netflix.conductor:conductor-scylla-persistence": {
+            "project": true
+        },
+        "com.netflix.conductor:conductor-workflow-event-listener": {
+            "locked": "3.13.3"
+        },
+        "io.orkes.queues:orkes-conductor-queues": {
+            "locked": "1.0.3"
         },
         "org.apache.logging.log4j:log4j-api": {
             "locked": "2.17.2"
@@ -57,7 +66,7 @@
             "locked": "2.17.2"
         },
         "org.springdoc:springdoc-openapi-ui": {
-            "locked": "1.6.12"
+            "locked": "1.6.15"
         },
         "org.springframework.boot:spring-boot-starter": {
             "locked": "2.7.3"
@@ -90,12 +99,6 @@
                 "com.netflix.conductor:conductor-awssqs-event-queue"
             ],
             "locked": "1.11.86"
-        },
-        "com.datastax.cassandra:cassandra-driver-core": {
-            "firstLevelTransitive": [
-                "com.netflix.conductor:conductor-cassandra-persistence"
-            ],
-            "locked": "3.10.2"
         },
         "com.fasterxml.jackson.core:jackson-annotations": {
             "firstLevelTransitive": [
@@ -135,7 +138,7 @@
                 "com.netflix.conductor:conductor-awssqs-event-queue",
                 "com.netflix.conductor:conductor-es6-persistence"
             ],
-            "locked": "31.1-android"
+            "locked": "32.0.1-jre"
         },
         "com.google.protobuf:protobuf-java": {
             "firstLevelTransitive": [
@@ -143,7 +146,7 @@
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "3.21.7"
+            "locked": "3.24.0"
         },
         "com.jayway.jsonpath:json-path": {
             "firstLevelTransitive": [
@@ -163,14 +166,10 @@
         "com.netflix.conductor:conductor-awssqs-event-queue": {
             "project": true
         },
-        "com.netflix.conductor:conductor-cassandra-persistence": {
-            "project": true
-        },
         "com.netflix.conductor:conductor-common": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc",
@@ -179,7 +178,8 @@
                 "com.netflix.conductor:conductor-json-jq-task",
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "project": true
         },
@@ -187,7 +187,6 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc-server",
                 "com.netflix.conductor:conductor-http-task",
@@ -195,7 +194,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "project": true
         },
@@ -217,6 +217,9 @@
         "com.netflix.conductor:conductor-json-jq-task": {
             "project": true
         },
+        "com.netflix.conductor:conductor-kafka": {
+            "locked": "3.13.3"
+        },
         "com.netflix.conductor:conductor-redis-concurrency-limit": {
             "project": true
         },
@@ -228,6 +231,12 @@
         },
         "com.netflix.conductor:conductor-rest": {
             "project": true
+        },
+        "com.netflix.conductor:conductor-scylla-persistence": {
+            "project": true
+        },
+        "com.netflix.conductor:conductor-workflow-event-listener": {
+            "locked": "3.13.3"
         },
         "com.netflix.dyno-queues:dyno-queues-redis": {
             "firstLevelTransitive": [
@@ -247,6 +256,12 @@
             ],
             "locked": "0.122.0"
         },
+        "com.scylladb:scylla-driver-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-scylla-persistence"
+            ],
+            "locked": "3.11.5.0"
+        },
         "com.spotify:completable-futures": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-core"
@@ -257,7 +272,7 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-redis-persistence"
             ],
-            "locked": "1.4.19"
+            "locked": "1.4.20"
         },
         "commons-io:commons-io": {
             "firstLevelTransitive": [
@@ -270,25 +285,28 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc-server"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-protobuf": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-services": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc-server"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-stub": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
+        },
+        "io.orkes.queues:orkes-conductor-queues": {
+            "locked": "1.0.3"
         },
         "io.reactivex:rxjava": {
             "firstLevelTransitive": [
@@ -338,13 +356,13 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc-server",
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
-                "com.netflix.conductor:conductor-redis-lock"
+                "com.netflix.conductor:conductor-redis-lock",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "3.12.0"
         },
@@ -353,7 +371,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -364,7 +381,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -373,7 +391,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -384,7 +401,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -393,7 +411,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -404,7 +421,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -413,7 +431,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -424,7 +441,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -433,7 +451,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -444,7 +461,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -469,6 +487,12 @@
         "org.glassfish.jaxb:jaxb-runtime": {
             "locked": "2.3.3"
         },
+        "org.openjdk.nashorn:nashorn-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-core"
+            ],
+            "locked": "15.4"
+        },
         "org.rarefiedredis.redis:redis-java": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-redis-persistence"
@@ -485,7 +509,7 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-rest"
             ],
-            "locked": "1.6.12"
+            "locked": "1.6.15"
         },
         "org.springframework.boot:spring-boot-starter": {
             "locked": "2.7.3"
@@ -529,12 +553,6 @@
             ],
             "locked": "1.11.86"
         },
-        "com.datastax.cassandra:cassandra-driver-core": {
-            "firstLevelTransitive": [
-                "com.netflix.conductor:conductor-cassandra-persistence"
-            ],
-            "locked": "3.10.2"
-        },
         "com.fasterxml.jackson.core:jackson-annotations": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-core"
@@ -573,7 +591,7 @@
                 "com.netflix.conductor:conductor-awssqs-event-queue",
                 "com.netflix.conductor:conductor-es6-persistence"
             ],
-            "locked": "31.1-android"
+            "locked": "32.0.1-jre"
         },
         "com.google.protobuf:protobuf-java": {
             "firstLevelTransitive": [
@@ -581,7 +599,7 @@
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "3.21.7"
+            "locked": "3.24.0"
         },
         "com.jayway.jsonpath:json-path": {
             "firstLevelTransitive": [
@@ -601,14 +619,10 @@
         "com.netflix.conductor:conductor-awssqs-event-queue": {
             "project": true
         },
-        "com.netflix.conductor:conductor-cassandra-persistence": {
-            "project": true
-        },
         "com.netflix.conductor:conductor-common": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc",
@@ -617,7 +631,8 @@
                 "com.netflix.conductor:conductor-json-jq-task",
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "project": true
         },
@@ -625,7 +640,6 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc-server",
                 "com.netflix.conductor:conductor-http-task",
@@ -633,7 +647,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "project": true
         },
@@ -655,6 +670,9 @@
         "com.netflix.conductor:conductor-json-jq-task": {
             "project": true
         },
+        "com.netflix.conductor:conductor-kafka": {
+            "locked": "3.13.3"
+        },
         "com.netflix.conductor:conductor-redis-concurrency-limit": {
             "project": true
         },
@@ -666,6 +684,12 @@
         },
         "com.netflix.conductor:conductor-rest": {
             "project": true
+        },
+        "com.netflix.conductor:conductor-scylla-persistence": {
+            "project": true
+        },
+        "com.netflix.conductor:conductor-workflow-event-listener": {
+            "locked": "3.13.3"
         },
         "com.netflix.dyno-queues:dyno-queues-redis": {
             "firstLevelTransitive": [
@@ -685,6 +709,12 @@
             ],
             "locked": "0.122.0"
         },
+        "com.scylladb:scylla-driver-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-scylla-persistence"
+            ],
+            "locked": "3.11.5.0"
+        },
         "com.spotify:completable-futures": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-core"
@@ -695,7 +725,7 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-redis-persistence"
             ],
-            "locked": "1.4.19"
+            "locked": "1.4.20"
         },
         "commons-io:commons-io": {
             "firstLevelTransitive": [
@@ -708,25 +738,28 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc-server"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-protobuf": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-services": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc-server"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-stub": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
+        },
+        "io.orkes.queues:orkes-conductor-queues": {
+            "locked": "1.0.3"
         },
         "io.reactivex:rxjava": {
             "firstLevelTransitive": [
@@ -776,13 +809,13 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc-server",
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
-                "com.netflix.conductor:conductor-redis-lock"
+                "com.netflix.conductor:conductor-redis-lock",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "3.12.0"
         },
@@ -791,7 +824,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -802,7 +834,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -811,7 +844,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -822,7 +854,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -831,7 +864,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -842,7 +874,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -851,7 +884,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -862,7 +894,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -871,7 +904,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -882,7 +914,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -907,6 +940,12 @@
         "org.glassfish.jaxb:jaxb-runtime": {
             "locked": "2.3.3"
         },
+        "org.openjdk.nashorn:nashorn-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-core"
+            ],
+            "locked": "15.4"
+        },
         "org.rarefiedredis.redis:redis-java": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-redis-persistence"
@@ -923,7 +962,7 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-rest"
             ],
-            "locked": "1.6.12"
+            "locked": "1.6.15"
         },
         "org.springframework.boot:spring-boot-starter": {
             "locked": "2.7.3"
@@ -956,15 +995,12 @@
     },
     "testCompileClasspath": {
         "com.google.protobuf:protobuf-java": {
-            "locked": "3.13.0"
+            "locked": "3.21.7"
         },
         "com.netflix.conductor:conductor-awss3-storage": {
             "project": true
         },
         "com.netflix.conductor:conductor-awssqs-event-queue": {
-            "project": true
-        },
-        "com.netflix.conductor:conductor-cassandra-persistence": {
             "project": true
         },
         "com.netflix.conductor:conductor-common": {
@@ -985,6 +1021,9 @@
         "com.netflix.conductor:conductor-json-jq-task": {
             "project": true
         },
+        "com.netflix.conductor:conductor-kafka": {
+            "locked": "3.13.3"
+        },
         "com.netflix.conductor:conductor-redis-concurrency-limit": {
             "project": true
         },
@@ -997,14 +1036,23 @@
         "com.netflix.conductor:conductor-rest": {
             "project": true
         },
+        "com.netflix.conductor:conductor-scylla-persistence": {
+            "project": true
+        },
+        "com.netflix.conductor:conductor-workflow-event-listener": {
+            "locked": "3.13.3"
+        },
         "io.grpc:grpc-protobuf": {
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-stub": {
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-testing": {
-            "locked": "1.50.2"
+            "locked": "1.58.0"
+        },
+        "io.orkes.queues:orkes-conductor-queues": {
+            "locked": "1.0.3"
         },
         "junit:junit": {
             "locked": "4.13.2"
@@ -1028,7 +1076,7 @@
             "locked": "5.8.2"
         },
         "org.springdoc:springdoc-openapi-ui": {
-            "locked": "1.6.12"
+            "locked": "1.6.15"
         },
         "org.springframework.boot:spring-boot-starter": {
             "locked": "2.7.3"
@@ -1065,12 +1113,6 @@
             ],
             "locked": "1.11.86"
         },
-        "com.datastax.cassandra:cassandra-driver-core": {
-            "firstLevelTransitive": [
-                "com.netflix.conductor:conductor-cassandra-persistence"
-            ],
-            "locked": "3.10.2"
-        },
         "com.fasterxml.jackson.core:jackson-annotations": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-core"
@@ -1109,7 +1151,7 @@
                 "com.netflix.conductor:conductor-awssqs-event-queue",
                 "com.netflix.conductor:conductor-es6-persistence"
             ],
-            "locked": "31.1-android"
+            "locked": "32.0.1-jre"
         },
         "com.google.protobuf:protobuf-java": {
             "firstLevelTransitive": [
@@ -1117,7 +1159,7 @@
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "3.13.0"
+            "locked": "3.21.7"
         },
         "com.jayway.jsonpath:json-path": {
             "firstLevelTransitive": [
@@ -1137,14 +1179,10 @@
         "com.netflix.conductor:conductor-awssqs-event-queue": {
             "project": true
         },
-        "com.netflix.conductor:conductor-cassandra-persistence": {
-            "project": true
-        },
         "com.netflix.conductor:conductor-common": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc",
@@ -1153,7 +1191,8 @@
                 "com.netflix.conductor:conductor-json-jq-task",
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "project": true
         },
@@ -1161,7 +1200,6 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc-server",
                 "com.netflix.conductor:conductor-http-task",
@@ -1169,7 +1207,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "project": true
         },
@@ -1191,6 +1230,9 @@
         "com.netflix.conductor:conductor-json-jq-task": {
             "project": true
         },
+        "com.netflix.conductor:conductor-kafka": {
+            "locked": "3.13.3"
+        },
         "com.netflix.conductor:conductor-redis-concurrency-limit": {
             "project": true
         },
@@ -1202,6 +1244,12 @@
         },
         "com.netflix.conductor:conductor-rest": {
             "project": true
+        },
+        "com.netflix.conductor:conductor-scylla-persistence": {
+            "project": true
+        },
+        "com.netflix.conductor:conductor-workflow-event-listener": {
+            "locked": "3.13.3"
         },
         "com.netflix.dyno-queues:dyno-queues-redis": {
             "firstLevelTransitive": [
@@ -1221,6 +1269,12 @@
             ],
             "locked": "0.122.0"
         },
+        "com.scylladb:scylla-driver-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-scylla-persistence"
+            ],
+            "locked": "3.11.5.0"
+        },
         "com.spotify:completable-futures": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-core"
@@ -1231,7 +1285,7 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-redis-persistence"
             ],
-            "locked": "1.4.19"
+            "locked": "1.4.20"
         },
         "commons-io:commons-io": {
             "firstLevelTransitive": [
@@ -1244,28 +1298,31 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc-server"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-protobuf": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-services": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc-server"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-stub": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-grpc"
             ],
-            "locked": "1.50.2"
+            "locked": "1.58.0"
         },
         "io.grpc:grpc-testing": {
-            "locked": "1.50.2"
+            "locked": "1.58.0"
+        },
+        "io.orkes.queues:orkes-conductor-queues": {
+            "locked": "1.0.3"
         },
         "io.reactivex:rxjava": {
             "firstLevelTransitive": [
@@ -1318,13 +1375,13 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
                 "com.netflix.conductor:conductor-grpc-server",
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
-                "com.netflix.conductor:conductor-redis-lock"
+                "com.netflix.conductor:conductor-redis-lock",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "3.12.0"
         },
@@ -1333,7 +1390,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -1344,7 +1400,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -1353,7 +1410,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -1364,7 +1420,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -1373,7 +1430,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -1384,7 +1440,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -1393,7 +1450,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -1404,7 +1460,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -1413,7 +1470,6 @@
                 "com.netflix.conductor:conductor-annotations",
                 "com.netflix.conductor:conductor-awss3-storage",
                 "com.netflix.conductor:conductor-awssqs-event-queue",
-                "com.netflix.conductor:conductor-cassandra-persistence",
                 "com.netflix.conductor:conductor-common",
                 "com.netflix.conductor:conductor-core",
                 "com.netflix.conductor:conductor-es6-persistence",
@@ -1424,7 +1480,8 @@
                 "com.netflix.conductor:conductor-redis-concurrency-limit",
                 "com.netflix.conductor:conductor-redis-lock",
                 "com.netflix.conductor:conductor-redis-persistence",
-                "com.netflix.conductor:conductor-rest"
+                "com.netflix.conductor:conductor-rest",
+                "com.netflix.conductor:conductor-scylla-persistence"
             ],
             "locked": "2.17.2"
         },
@@ -1452,6 +1509,12 @@
         "org.junit.vintage:junit-vintage-engine": {
             "locked": "5.8.2"
         },
+        "org.openjdk.nashorn:nashorn-core": {
+            "firstLevelTransitive": [
+                "com.netflix.conductor:conductor-core"
+            ],
+            "locked": "15.4"
+        },
         "org.rarefiedredis.redis:redis-java": {
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-redis-persistence"
@@ -1468,7 +1531,7 @@
             "firstLevelTransitive": [
                 "com.netflix.conductor:conductor-rest"
             ],
-            "locked": "1.6.12"
+            "locked": "1.6.15"
         },
         "org.springframework.boot:spring-boot-starter": {
             "locked": "2.7.3"

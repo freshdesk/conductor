@@ -143,6 +143,11 @@ public class CacheableMetadataDAO implements MetadataDAO {
         return scyllaMetadataDAO.getAllWorkflowDefs();
     }
 
+    @Override
+    public List<WorkflowDef> getAllWorkflowDefsLatestVersions() {
+        return scyllaMetadataDAO.getAllWorkflowDefsLatestVersions();
+    }
+
     private List<TaskDef> refreshTaskDefsCache() {
         try {
             Cache taskDefsCache = cacheManager.getCache(TASK_DEF_CACHE);

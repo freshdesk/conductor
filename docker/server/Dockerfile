@@ -1,49 +1,76 @@
 #
-# conductor:server - Netflix conductor server
+# conductor:server - Combined Netflix conductor server & UI
 #
-
 # ===========================================================================================================
 # 0. Builder stage
 # ===========================================================================================================
-FROM public.ecr.aws/i1i0w6p5/amazoncorretto:11.0.20 AS builder
+FROM alpine:3.18 AS builder
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
 
-# Copy the project directly onto the image
+# ===========================================================================================================
+# 0. Build Conductor Server
+# ===========================================================================================================
+
+
+# Install dependencies
+RUN apk add openjdk17
+RUN apk add git
+RUN apk add --update nodejs npm yarn
+
 COPY . /conductor
-WORKDIR /conductor
+WORKDIR /conductor/ui
+RUN yarn install && yarn build
+RUN ls -ltr
+RUN echo "Done building UI"
+
+# Checkout the community project
+WORKDIR /
+RUN mkdir server-build
+WORKDIR  server-build
+RUN ls -ltr
+
+RUN git clone https://github.com/Netflix/conductor-community.git
+
+# Copy the project directly onto the image
+WORKDIR conductor-community
+RUN ls -ltr
 
 # Build the server on run
 RUN ./gradlew build -x test --stacktrace
+WORKDIR /server-build
+RUN ls -ltr
+RUN pwd
+
 
 # ===========================================================================================================
 # 1. Bin stage
 # ===========================================================================================================
-FROM public.ecr.aws/i1i0w6p5/amazoncorretto:11.0.20
+FROM alpine:3.18
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
+
+RUN apk add openjdk17
+RUN apk add nginx
 
 # Make app folders
 RUN mkdir -p /app/config /app/logs /app/libs
 
 # Copy the compiled output to new image
-COPY --from=builder /conductor/docker/server/bin /app
-COPY --from=builder /conductor/docker/server/config /app/config
-COPY --from=builder /conductor/server/build/libs/conductor-server-*-boot.jar /app/libs
+COPY docker/server/bin /app
+COPY docker/server/config /app/config
+COPY --from=builder /server-build/conductor-community/community-server/build/libs/*boot*.jar /app/libs/conductor-server.jar
 
-# Required Packages
-RUN yum install -y procps shadow-utils mysql screen nc
+# Copy compiled UI assets to nginx www directory
+WORKDIR /usr/share/nginx/html
+RUN rm -rf ./*
+COPY --from=builder /conductor/ui/build .
+COPY --from=builder /conductor/docker/server/nginx/nginx.conf /etc/nginx/http.d/default.conf
 
-# Creating a new user deploy with group id 3130 and name conductor
-RUN groupadd -g 3130 conductor \
-    && useradd --uid 3130 --home-dir /home/deploy --gid conductor --create-home --no-user-group deploy
+# Copy the files for the server into the app folders
+RUN chmod +x /app/startup.sh
 
-RUN chown -R deploy:conductor /app
-
-USER deploy:conductor
-
-#Using k8s readiness probe. So docker healthcheck not needed
-#HEALTHCHECK --interval=60s --timeout=30s --retries=10 CMD curl -I -XGET http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=60s --timeout=30s --retries=10 CMD curl -I -XGET http://localhost:8080/health || exit 1
 
 CMD [ "/app/startup.sh" ]
 ENTRYPOINT [ "/bin/sh"]

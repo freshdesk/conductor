@@ -14,9 +14,12 @@ package com.netflix.conductor.scylla.dao;
 
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
 import com.netflix.conductor.scylla.config.ScyllaProperties;
@@ -65,6 +68,7 @@ public class ScyllaMetadataDAO extends ScyllaBaseDAO implements MetadataDAO {
     private final PreparedStatement selectTaskDefStatement;
     private final PreparedStatement selectAllTaskDefsStatement;
 
+    private final PreparedStatement selectAllWorkflowDefsLatestVersionsStatement;
     private final PreparedStatement updateWorkflowDefStatement;
 
     private final PreparedStatement deleteWorkflowDefStatement;
@@ -102,6 +106,9 @@ public class ScyllaMetadataDAO extends ScyllaBaseDAO implements MetadataDAO {
                         .setConsistencyLevel(properties.getReadConsistencyLevel());
         this.selectAllTaskDefsStatement =
                 session.prepare(statements.getSelectAllTaskDefsStatement())
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+        this.selectAllWorkflowDefsLatestVersionsStatement =
+                session.prepare(statements.getSelectAllWorkflowDefsLatestVersionsStatement())
                         .setConsistencyLevel(properties.getReadConsistencyLevel());
 
         this.updateWorkflowDefStatement =
@@ -284,6 +291,48 @@ public class ScyllaMetadataDAO extends ScyllaBaseDAO implements MetadataDAO {
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "getAllWorkflowDefs");
             String errorMsg = "Error retrieving all workflow defs";
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
+    }
+
+    @Override
+    public List<WorkflowDef> getAllWorkflowDefsLatestVersions() {
+        try {
+            ResultSet resultSet =
+                    session.execute(
+                            selectAllWorkflowDefsLatestVersionsStatement.bind(
+                                    WORKFLOW_DEF_INDEX_KEY));
+            List<Row> rows = resultSet.all();
+            if (rows.size() == 0) {
+                LOGGER.info("No workflow definitions were found.");
+                return Collections.EMPTY_LIST;
+            }
+            Map<String, PriorityQueue<WorkflowDef>> allWorkflowDefs = new HashMap<>();
+
+            for (Row row : rows) {
+                String defNameVersion = row.getString(WORKFLOW_DEF_NAME_VERSION_KEY);
+                var nameVersion = getWorkflowNameAndVersion(defNameVersion);
+                WorkflowDef def =
+                        getWorkflowDef(nameVersion.getLeft(), nameVersion.getRight()).orElse(null);
+                if (def == null) {
+                    continue;
+                }
+                if (allWorkflowDefs.get(def.getName()) == null) {
+                    allWorkflowDefs.put(
+                            def.getName(),
+                            new PriorityQueue<>(
+                                    (WorkflowDef w1, WorkflowDef w2) ->
+                                            Integer.compare(w2.getVersion(), w1.getVersion())));
+                }
+                allWorkflowDefs.get(def.getName()).add(def);
+            }
+            return allWorkflowDefs.values().stream()
+                    .map(PriorityQueue::poll)
+                    .collect(Collectors.toList());
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "getAllWorkflowDefsLatestVersions");
+            String errorMsg = "Error retrieving all workflow defs latest versions";
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
