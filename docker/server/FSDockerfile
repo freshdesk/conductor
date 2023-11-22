@@ -30,7 +30,7 @@ RUN mkdir -p /app/config /app/logs /app/libs
 COPY --from=builder /conductor/docker/server/bin /app
 COPY --from=builder /conductor/docker/server/config /app/config
 COPY --from=builder /conductor/server/build/libs/conductor-server-*-boot.jar /app/libs
-RUN wget https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.26.0/opentelemetry-javaagent.jar -O /app/libs/opentelemetry-javaagent.jar
+RUN curl -o /app/libs/opentelemetry-javaagent.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.26.0/opentelemetry-javaagent.jar
 
 # Required Packages
 RUN yum install -y procps shadow-utils mysql screen nc
