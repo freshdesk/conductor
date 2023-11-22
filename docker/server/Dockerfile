@@ -60,7 +60,6 @@ RUN mkdir -p /app/config /app/logs /app/libs
 COPY docker/server/bin /app
 COPY docker/server/config /app/config
 COPY --from=builder /server-build/conductor-community/community-server/build/libs/*boot*.jar /app/libs/conductor-server.jar
-RUN wget https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v1.26.0/opentelemetry-javaagent.jar -O /app/libs/opentelemetry-javaagent-1.26.0.jar
 
 # Copy compiled UI assets to nginx www directory
 WORKDIR /usr/share/nginx/html
