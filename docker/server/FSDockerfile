@@ -22,6 +22,7 @@ RUN ./gradlew build -x test --stacktrace
 FROM public.ecr.aws/amazoncorretto/amazoncorretto:17
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
+ENV OPENTELEMETRY_JAR_FILE opentelemetry-javaagent-1.26.0.jar
 
 # Make app folders
 RUN mkdir -p /app/config /app/logs /app/libs
@@ -30,6 +31,7 @@ RUN mkdir -p /app/config /app/logs /app/libs
 COPY --from=builder /conductor/docker/server/bin /app
 COPY --from=builder /conductor/docker/server/config /app/config
 COPY --from=builder /conductor/server/build/libs/conductor-server-*-boot.jar /app/libs
+COPY --from=builder /conductor/server/build/libs/$OPENTELEMETRY_JAR_FILE /app/libs
 
 # Required Packages
 RUN yum install -y procps shadow-utils mysql screen nc
