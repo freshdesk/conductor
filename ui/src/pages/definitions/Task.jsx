@@ -59,7 +59,7 @@ export default function TaskDefinitions() {
 
       <div className={classes.tabContent}>
         <div className={classes.buttonRow}>
-          <Button component={NavLink} path="/taskDef" startIcon={<AddIcon />}>
+          <Button component={NavLink} disabled="true" path="/taskDef" startIcon={<AddIcon />}>
             New Task Definition
           </Button>
         </div>

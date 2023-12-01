@@ -108,7 +108,7 @@ export default function Workflow() {
   const navigate = usePushHistory();
   const [saveDialog, setSaveDialog] = useState(null);
   const [resetDialog, setResetDialog] = useState(false); // false=idle, undefined=current_version, otherwise version id
-  const [isModified, setIsModified] = useState(false);
+  const [isModified, setIsModified] = useState(true);
   const [dag, setDag] = useState(null);
   const [jsonErrors, setJsonErrors] = useState([]);
   const [decorations, setDecorations] = useState([]);
@@ -302,7 +302,7 @@ export default function Workflow() {
             </Select>
 
             {isModified ? (
-              <Pill color="yellow" label="Modified" />
+                <Pill label="Unmodified" />
             ) : (
               <Pill label="Unmodified" />
             )}
@@ -319,13 +319,13 @@ export default function Workflow() {
 
             <div className={classes.rightButtons}>
               <Button
-                disabled={!_.isEmpty(jsonErrors) || !isModified}
+                disabled={!_.isEmpty(jsonErrors) || isModified}
                 onClick={handleOpenSave}
               >
                 Save
               </Button>
               <Button
-                disabled={!isModified}
+                disabled={isModified}
                 onClick={() => handleResetVersion(workflowVersion)}
                 variant="secondary"
               >

@@ -36,7 +36,7 @@ export default function TaskDefinition() {
   const match = useRouteMatch();
   const navigate = usePushHistory();
 
-  const [isModified, setIsModified] = useState(false);
+  const [isModified, setIsModified] = useState(true);
   const [jsonErrors, setJsonErrors] = useState([]);
   const [resetDialog, setResetDialog] = useState(false);
   const [saveDialog, setSaveDialog] = useState(null);
@@ -123,7 +123,7 @@ export default function TaskDefinition() {
           <Text className={classes.name}>{taskName || "NEW"}</Text>
 
           {isModified ? (
-            <Pill color="yellow" label="Modified" />
+              <Pill label="Unmodified" />
           ) : (
             <Pill label="Unmodified" />
           )}
@@ -131,13 +131,13 @@ export default function TaskDefinition() {
 
           <div className={classes.rightButtons}>
             <Button
-              disabled={!_.isEmpty(jsonErrors) || !isModified}
+              disabled={!_.isEmpty(jsonErrors) || isModified}
               onClick={handleOpenSave}
             >
               Save
             </Button>
             <Button
-              disabled={!isModified}
+              disabled={isModified}
               onClick={() => setResetDialog(true)}
               variant="secondary"
             >

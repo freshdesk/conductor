@@ -115,6 +115,7 @@ export default function WorkflowDefinitions() {
         <div className={classes.buttonRow}>
           <Button
             component={NavLink}
+            disabled="true"
             path="/workflowDef"
             startIcon={<AddIcon />}
           >
