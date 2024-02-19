@@ -29,18 +29,18 @@ public class ScyllaPollDataDAO implements PollDataDAO {
 
     @Override
     public void updateLastPollData(String taskDefName, String domain, String workerId) {
-        LOGGER.info("Task ScyllaPollDataDAO.updateLastPollData NOT implemented in scylla persistence");
+        // LOGGER.info("Task ScyllaPollDataDAO.updateLastPollData NOT implemented in scylla persistence");
     }
 
     @Override
     public PollData getPollData(String taskDefName, String domain) {
-        LOGGER.info("Task ScyllaPollDataDAO.getPollData NOT implemented in scylla persistence");
+        // LOGGER.info("Task ScyllaPollDataDAO.getPollData NOT implemented in scylla persistence");
         return null;
     }
 
     @Override
     public List<PollData> getPollData(String taskDefName) {
-        LOGGER.info("Task ScyllaPollDataDAO.getPollData NOT implemented in scylla persistence");
+        // LOGGER.info("Task ScyllaPollDataDAO.getPollData NOT implemented in scylla persistence");
         return null;
     }
 }
