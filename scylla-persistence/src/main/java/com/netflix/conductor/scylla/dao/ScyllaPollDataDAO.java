@@ -16,6 +16,8 @@ import java.util.List;
 
 import com.netflix.conductor.common.metadata.tasks.PollData;
 import com.netflix.conductor.dao.PollDataDAO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is a dummy implementation and this feature is not implemented for Cassandra backed
@@ -23,21 +25,22 @@ import com.netflix.conductor.dao.PollDataDAO;
  */
 public class ScyllaPollDataDAO implements PollDataDAO {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaPollDataDAO.class);
+
     @Override
     public void updateLastPollData(String taskDefName, String domain, String workerId) {
-        throw new UnsupportedOperationException(
-                "This method is not implemented in ScyllaPollDataDAO. Please use ExecutionDAOFacade instead.");
+        // LOGGER.info("Task ScyllaPollDataDAO.updateLastPollData NOT implemented in scylla persistence");
     }
 
     @Override
     public PollData getPollData(String taskDefName, String domain) {
-        throw new UnsupportedOperationException(
-                "This method is not implemented in ScyllaPollDataDAO. Please use ExecutionDAOFacade instead.");
+        // LOGGER.info("Task ScyllaPollDataDAO.getPollData NOT implemented in scylla persistence");
+        return null;
     }
 
     @Override
     public List<PollData> getPollData(String taskDefName) {
-        throw new UnsupportedOperationException(
-                "This method is not implemented in ScyllaPollDataDAO. Please use ExecutionDAOFacade instead.");
+        // LOGGER.info("Task ScyllaPollDataDAO.getPollData NOT implemented in scylla persistence");
+        return null;
     }
 }
