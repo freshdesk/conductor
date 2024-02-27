@@ -90,6 +90,8 @@ public class StartWorkflowOperation implements WorkflowOperation<StartWorkflowIn
         Map<String, Object> workflowInput = input.getWorkflowInput();
         String externalInputPayloadStoragePath = input.getExternalInputPayloadStoragePath();
         validateWorkflow(workflowDefinition, workflowInput, externalInputPayloadStoragePath);
+        LOGGER.debug(
+                "Workflow: validated and loaded for execution : {}", input.getName());
 
         // Generate ID if it's not present
         String workflowId =
@@ -122,6 +124,10 @@ public class StartWorkflowOperation implements WorkflowOperation<StartWorkflowIn
 
         try {
             createAndEvaluate(workflow);
+            LOGGER.debug(
+                    "Workflow operation started for {} with id: {}",
+                    workflow.getWorkflowName(),
+                    workflow.getWorkflowId());
             Monitors.recordWorkflowStartSuccess(
                     workflow.getWorkflowName(),
                     String.valueOf(workflow.getWorkflowVersion()),
@@ -148,6 +154,10 @@ public class StartWorkflowOperation implements WorkflowOperation<StartWorkflowIn
      * This is to ensure that workflow creation action precedes any other action on a given workflow.
      */
     private void createAndEvaluate(WorkflowModel workflow) {
+        LOGGER.debug(
+                "createAndEvaluate Instance of workflow: {} created with id: {}",
+                workflow.getWorkflowName(),
+                workflow.getWorkflowId());
         if (!executionLockService.acquireLock(workflow.getWorkflowId())) {
             throw new TransientException("Error acquiring lock when creating workflow: {}");
         }
