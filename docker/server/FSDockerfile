@@ -22,7 +22,7 @@ RUN ./gradlew build -x test --stacktrace
 FROM public.ecr.aws/amazoncorretto/amazoncorretto:17
 
 LABEL maintainer="Netflix OSS <conductor@netflix.com>"
-ENV OPENTELEMETRY_JAR_FILE opentelemetry-javaagent-1.26.0.jar
+ENV OPENTELEMETRY_JAR_FILE opentelemetry-javaagent-1.32.1.jar
 
 # Make app folders
 RUN mkdir -p /app/config /app/logs /app/libs
