@@ -24,6 +24,11 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.io.FileSystemResource;
 
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
+import com.netflix.spectator.micrometer.MicrometerRegistry;
+
 // Prevents from the datasource beans to be loaded, AS they are needed only for specific databases.
 // In case that SQL database is selected this class will be imported back in the appropriate
 // database persistence module.
@@ -35,6 +40,7 @@ public class Conductor {
 
     public static void main(String[] args) throws IOException {
         loadExternalConfig();
+        setupPrometheusRegistry();
 
         SpringApplication.run(Conductor.class, args);
     }
@@ -64,4 +70,14 @@ public class Conductor {
         }
     }
 
+    /**
+     * To Register PrometheusRegistry
+     */
+    private static void setupPrometheusRegistry() {
+        final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
+        prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
+        Spectator.globalRegistry().add(metricsRegistry);
+        log.info("Registered PrometheusRegistry");
+    }
 }
