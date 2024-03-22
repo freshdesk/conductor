@@ -24,6 +24,8 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.io.FileSystemResource;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import com.netflix.spectator.api.Registry;
+import com.netflix.spectator.api.Spectator;
 
 // Prevents from the datasource beans to be loaded, AS they are needed only for specific databases.
 // In case that SQL database is selected this class will be imported back in the appropriate
