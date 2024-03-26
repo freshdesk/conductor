@@ -29,7 +29,9 @@ import com.netflix.spectator.api.Spectator;
 import com.netflix.spectator.micrometer.MicrometerRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.micrometer.prometheus.PrometheusRenameFilter;
+import io.prometheus.client.CollectorRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
+import io.micrometer.core.instrument.Clock;
 
 // Prevents from the datasource beans to be loaded, AS they are needed only for specific databases.
 // In case that SQL database is selected this class will be imported back in the appropriate
@@ -76,7 +78,9 @@ public class Conductor {
      * To Register PrometheusRegistry
      */
     private static void setupPrometheusRegistry() {
-        final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+        final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
+                                                                            CollectorRegistry.defaultRegistry,
+                                                                            Clock.SYSTEM);
         final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
         prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
         Spectator.globalRegistry().add(metricsRegistry);
