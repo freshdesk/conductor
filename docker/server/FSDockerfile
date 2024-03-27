@@ -35,8 +35,9 @@ COPY --from=builder /conductor/server/build/libs/$OPENTELEMETRY_JAR_FILE /app/li
 
 # Required Packages
 RUN yum install -y procps shadow-utils mysql screen nc
-RUN yum install python3-pip
+RUN yum install python-pip -y
 RUN pip install -U cqlsh
+RUN cqlsh
 
 
 # Creating a new user deploy with group id 3130 and name conductor
