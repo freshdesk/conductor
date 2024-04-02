@@ -537,6 +537,10 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         try {
             List<TaskModel> tasks = workflow.getTasks();
             Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
+            LOGGER.info(
+                    "Correlation ID for workflow {} is {}",
+                    workflow.getWorkflowId(),
+                    correlationId);
             workflow.setTasks(new LinkedList<>());
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
@@ -545,9 +549,13 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             session.execute(
                     updateWorkflowStatement.bind(
                             payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
+            LOGGER.info(
+                    "Workflow execution completed and status updated for workflow_id {} is {}",
+                    workflow.getWorkflowId(),
+                    workflow.getStatus());
             workflow.setTasks(tasks);
             return workflow.getWorkflowId();
-        } catch (DriverException e) {
+        } catch (Exception e) {
             Monitors.error(CLASS_NAME, "updateWorkflow");
             String errorMsg =
                     String.format("Failed to update workflow: %s", workflow.getWorkflowId());
