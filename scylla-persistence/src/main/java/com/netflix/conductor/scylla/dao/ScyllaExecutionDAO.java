@@ -558,11 +558,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         workflow.getWorkflowId(), workflow.getStatus());
                 return workflow.getWorkflowId();
             }
-            session.execute(
-                    updateWorkflowStatement.bind(
-                            payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
             LOGGER.debug(
-                    "Workflow execution completed and status updated for workflow_id {} is {}",
+                    "Workflow status updated for workflow_id {} is {}",
                     workflow.getWorkflowId(),
                     workflow.getStatus());
             workflow.setTasks(tasks);
