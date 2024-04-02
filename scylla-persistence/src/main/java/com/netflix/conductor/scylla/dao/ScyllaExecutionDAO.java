@@ -537,19 +537,31 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         try {
             List<TaskModel> tasks = workflow.getTasks();
             Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
-            LOGGER.info(
-                    "Correlation ID for workflow {} is {}",
-                    workflow.getWorkflowId(),
-                    correlationId);
             workflow.setTasks(new LinkedList<>());
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
+            WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
+            LOGGER.debug(
+                    "prevWorkflow status updated for workflow_id {} is {}",
+                    prevWorkflow.getWorkflowId(),
+                    prevWorkflow.getStatus());
+            // Added this change to update the workflow only if it is not completed, Rerun cannot be done on completed workflows
+            if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+                session.execute(
+                        updateWorkflowStatement.bind(
+                                payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
+            } else {
+                LOGGER.info(
+                        "Workflow {} is already completed. Not updating the workflow current status {}",
+                        workflow.getWorkflowId(), workflow.getStatus());
+                return workflow.getWorkflowId();
+            }
             session.execute(
                     updateWorkflowStatement.bind(
-                            payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
-            LOGGER.info(
+                            payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
+            LOGGER.debug(
                     "Workflow execution completed and status updated for workflow_id {} is {}",
                     workflow.getWorkflowId(),
                     workflow.getStatus());
