@@ -24,15 +24,6 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.io.FileSystemResource;
 
-import com.netflix.spectator.api.Registry;
-import com.netflix.spectator.api.Spectator;
-import com.netflix.spectator.micrometer.MicrometerRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.micrometer.prometheus.PrometheusRenameFilter;
-import io.prometheus.client.CollectorRegistry;
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.core.instrument.Clock;
-
 // Prevents from the datasource beans to be loaded, AS they are needed only for specific databases.
 // In case that SQL database is selected this class will be imported back in the appropriate
 // database persistence module.
@@ -44,7 +35,6 @@ public class Conductor {
 
     public static void main(String[] args) throws IOException {
         loadExternalConfig();
-        setupPrometheusRegistry();
 
         SpringApplication.run(Conductor.class, args);
     }
@@ -72,18 +62,5 @@ public class Conductor {
                 log.warn("Ignoring {} since it does not exist", configFile);
             }
         }
-    }
-
-    /**
-     * To Register PrometheusRegistry
-     */
-    private static void setupPrometheusRegistry() {
-        final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
-                                                                            CollectorRegistry.defaultRegistry,
-                                                                            Clock.SYSTEM);
-        final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
-        prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
-        Spectator.globalRegistry().add(metricsRegistry);
-        log.info("Registered PrometheusRegistry");
     }
 }
