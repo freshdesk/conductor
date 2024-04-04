@@ -16,10 +16,10 @@ import io.micrometer.core.instrument.Clock;
 
 // This class loads all the configurations related to prometheus. 
 @Configuration
-public class PrometheusConfig
+public class PrometheusIntegrationConfig
         implements CommandLineRunner {
 
-    private static final Logger log = LoggerFactory.getLogger(PrometheusConfig.class);
+    private static final Logger log = LoggerFactory.getLogger(PrometheusIntegrationConfig.class);
 
     @Override
     public void run(String... args) throws Exception {
