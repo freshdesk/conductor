@@ -38,7 +38,7 @@ public class PrometheusIntegrationConfig
         prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
         Spectator.globalRegistry().add(metricsRegistry);
         Metrics.globalRegistry.add(prometheusRegistry);
-        log.info("Registered PrometheusRegistry");
+        log.info("Registered PrometheusRegistry 1");
     }
 
 }
