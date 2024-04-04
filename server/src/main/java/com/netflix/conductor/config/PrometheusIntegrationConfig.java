@@ -13,6 +13,7 @@ import io.micrometer.prometheus.PrometheusRenameFilter;
 import io.prometheus.client.CollectorRegistry;
 import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.core.instrument.Clock;
+import io.micrometer.core.instrument.Metrics;
 
 // This class loads all the configurations related to prometheus. 
 @Configuration
@@ -36,6 +37,7 @@ public class PrometheusIntegrationConfig
         final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
         prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
         Spectator.globalRegistry().add(metricsRegistry);
+        Metrics.addRegistry(metricsRegistry);
         log.info("Registered PrometheusRegistry");
     }
 
