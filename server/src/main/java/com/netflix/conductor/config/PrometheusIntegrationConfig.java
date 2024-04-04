@@ -37,7 +37,7 @@ public class PrometheusIntegrationConfig
         final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
         prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
         Spectator.globalRegistry().add(metricsRegistry);
-        Metrics.addRegistry(metricsRegistry);
+        Metrics.addRegistry(prometheusRegistry);
         log.info("Registered PrometheusRegistry");
     }
 
