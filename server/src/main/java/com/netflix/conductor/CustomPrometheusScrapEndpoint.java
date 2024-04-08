@@ -13,12 +13,12 @@ import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.prometheus.client.CollectorRegistry;
 
-@Endpoint(id="custom_metrics")
+@Endpoint(id="custom-metrics")
 @Component
 public class CustomPrometheusScrapEndpoint {
     @ReadOperation
     @Bean
-    public String custom_metrics() {
+    public String scrapCustomMetrics() {
         PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
                                                                             CollectorRegistry.defaultRegistry,
                                                                             Clock.SYSTEM);
