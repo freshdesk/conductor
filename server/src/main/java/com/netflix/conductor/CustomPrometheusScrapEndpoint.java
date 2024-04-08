@@ -22,6 +22,6 @@ public class CustomPrometheusScrapEndpoint {
         PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
                                                                             CollectorRegistry.defaultRegistry,
                                                                             Clock.SYSTEM);
-        prometheusRegistry.scrape();
+        return prometheusRegistry.scrape();
     }
 }
