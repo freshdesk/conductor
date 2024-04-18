@@ -31,14 +31,13 @@ public class PrometheusIntegrationConfig
      * To Register PrometheusRegistry
     */
     private static void setupPrometheusRegistry() {
-        // final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
-        //                                                                     CollectorRegistry.defaultRegistry,
-        //                                                                     Clock.SYSTEM);
-        // final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
-        // prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
-        // Spectator.globalRegistry().add(metricsRegistry);
-        // Metrics.globalRegistry.add(prometheusRegistry);
-        Spectator.globalRegistry().add(Metrics.globalRegistry);
+        final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
+                                                                            CollectorRegistry.defaultRegistry,
+                                                                            Clock.SYSTEM);
+        final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
+        prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
+        Spectator.globalRegistry().add(metricsRegistry);
+        Metrics.globalRegistry.add(prometheusRegistry);
         log.info("Registered PrometheusRegistry 1");
     }
 
