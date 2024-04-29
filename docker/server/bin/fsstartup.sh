@@ -33,4 +33,4 @@ fi
 
 echo "Using java options config: $JAVA_OPTS"
 
-OTEL_TRACES_SAMPLER=parentbased_always_off OTEL_RESOURCE_ATTRIBUTES=service.name=${OTEL_SERVICE_NAME},host.name=${POD_NAME},host.ip=${POD_IP} OTEL_EXPORTER_OTLP_ENDPOINT=http://${HOST_IP}:5680 OTEL_METRICS_EXPORTER=none java ${JAVA_OPTS} -jar -DCONDUCTOR_CONFIG_FILE=$config_file conductor-server-*-boot.jar 2>&1 | tee -a /app/logs/server.log
+OTEL_TRACES_SAMPLER=parentbased_always_off OTEL_RESOURCE_ATTRIBUTES=service.name=${OTEL_SERVICE_NAME},host.name=${POD_NAME},host.ip=${POD_IP} OTEL_EXPORTER_OTLP_ENDPOINT=http://${HOST_IP}:5680 OTEL_METRICS_EXPORTER=none java ${JAVA_OPTS} -jar -DCONDUCTOR_CONFIG_FILE=$config_file -Dotel.javaagent.debug=true conductor-server-*-boot.jar 2>&1 | tee -a /app/logs/server.log
