@@ -26,6 +26,11 @@ public class PrometheusIntegrationConfig
     @Autowired
 	private static final PrometheusMeterRegistry prometheusRegistry;
 
+    @Autowired
+    public PrometheusIntegrationConfig(PrometheusMeterRegistry prometheusRegistry) {
+        this.prometheusRegistry = prometheusRegistry;
+    }
+
     @Override
     public void run(String... args) throws Exception {
         setupPrometheusRegistry();
