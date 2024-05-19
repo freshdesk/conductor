@@ -24,7 +24,7 @@ public class PrometheusIntegrationConfig
     private static final Logger log = LoggerFactory.getLogger(PrometheusIntegrationConfig.class);
 
     @Autowired
-	private PrometheusMeterRegistry prometheusRegistry;
+	private static final PrometheusMeterRegistry prometheusRegistry;
 
     @Override
     public void run(String... args) throws Exception {
