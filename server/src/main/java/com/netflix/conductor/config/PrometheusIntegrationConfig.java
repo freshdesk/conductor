@@ -24,7 +24,7 @@ public class PrometheusIntegrationConfig
     private static final Logger log = LoggerFactory.getLogger(PrometheusIntegrationConfig.class);
 
     @Autowired
-	private PrometheusMeterRegistry prometheusRegistry;
+	private static PrometheusMeterRegistry prometheusRegistry;
 
     @Autowired
     public PrometheusIntegrationConfig(PrometheusMeterRegistry prometheusRegistry) {
@@ -43,9 +43,10 @@ public class PrometheusIntegrationConfig
         // final PrometheusMeterRegistry prometheusRegistry = new PrometheusMeterRegistry(PrometheusConfig.DEFAULT,
         //                                                                     CollectorRegistry.defaultRegistry,
         //                                                                     Clock.SYSTEM);
-        MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
+        final MicrometerRegistry metricsRegistry = new MicrometerRegistry(prometheusRegistry);
         prometheusRegistry.config().meterFilter(new PrometheusRenameFilter());
         Spectator.globalRegistry().add(metricsRegistry);
+        Metrics.globalRegistry.add(prometheusRegistry);
         log.info("Registered PrometheusRegistry 1");
     }
 
