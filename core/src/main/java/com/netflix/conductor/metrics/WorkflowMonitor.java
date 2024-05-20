@@ -84,13 +84,15 @@ public class WorkflowMonitor {
                 refreshCounter = metadataRefreshInterval;
             }
 
-            getPendingWorkflowToOwnerAppMap(workflowDefs)
-                    .forEach(
-                            (workflowName, ownerApp) -> {
-                                long count =
-                                        executionDAOFacade.getPendingWorkflowCount(workflowName);
-                                Monitors.recordRunningWorkflows(count, workflowName, ownerApp);
-                            });
+            // Commented out as we don't have use case for Pending Workflows as of now and hence we don't have pending workflow implementation from
+            // scylla persistence.
+//            getPendingWorkflowToOwnerAppMap(workflowDefs)
+//                    .forEach(
+//                            (workflowName, ownerApp) -> {
+//                                long count =
+//                                        executionDAOFacade.getPendingWorkflowCount(workflowName);
+//                                Monitors.recordRunningWorkflows(count, workflowName, ownerApp);
+//                            });
 
             taskDefs.forEach(
                     taskDef -> {
