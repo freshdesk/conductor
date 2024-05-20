@@ -22,11 +22,8 @@ public class PrometheusIntegrationConfig
         implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(PrometheusIntegrationConfig.class);
+    private static PrometheusMeterRegistry prometheusRegistry;
 
-    @Autowired
-	private static PrometheusMeterRegistry prometheusRegistry;
-
-    @Autowired
     public PrometheusIntegrationConfig(PrometheusMeterRegistry prometheusRegistry) {
         this.prometheusRegistry = prometheusRegistry;
     }
