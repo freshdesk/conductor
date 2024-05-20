@@ -83,17 +83,19 @@ public class WorkflowMonitor {
                 refreshCounter = metadataRefreshInterval;
         }
 
-        try {
-                getPendingWorkflowToOwnerAppMap(workflowDefs)
-                        .forEach(
-                                (workflowName, ownerApp) -> {
-                                long count =
-                                        executionDAOFacade.getPendingWorkflowCount(workflowName);
-                                Monitors.recordRunningWorkflows(count, workflowName, ownerApp);
-                                });
-        } catch (Exception e) {
-            LOGGER.error("Error while publishing scheduled metrics", e);
-        }
+        // This getPendingWorkflowCount is not implemented in scylla execution DAO class. 
+        // Disabling this temporarily.
+        // try {
+        //         getPendingWorkflowToOwnerAppMap(workflowDefs)
+        //                 .forEach(
+        //                         (workflowName, ownerApp) -> {
+        //                         long count =
+        //                                 executionDAOFacade.getPendingWorkflowCount(workflowName);
+        //                         Monitors.recordRunningWorkflows(count, workflowName, ownerApp);
+        //                         });
+        // } catch (Exception e) {
+        //     LOGGER.error("Error while publishing scheduled metrics", e);
+        // }
 
         try {
                 taskDefs.forEach(

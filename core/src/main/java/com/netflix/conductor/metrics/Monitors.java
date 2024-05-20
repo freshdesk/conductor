@@ -392,6 +392,9 @@ public class Monitors {
     }
 
     public static void recordUnackTime(String workflowType, long duration) {
+        // This metrics has workflowName in our prod account we have more number of workflows.
+        // So we may get cardinality problems in haystack due to this.
+        // Disabling this temporarily.
         // getTimer(classQualifier, "workflow_unack", "workflowName", workflowType)
         //         .record(duration, TimeUnit.MILLISECONDS);
     }
