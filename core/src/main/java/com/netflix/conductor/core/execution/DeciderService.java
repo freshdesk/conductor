@@ -847,6 +847,7 @@ public class DeciderService {
                                                 || runningTask.getStatus().isTerminal())
                         .map(TaskModel::getReferenceTaskName)
                         .collect(Collectors.toList());
+        LOGGER.info("DeciderService getTasksToBeScheduled tasksInWorkflow {}", tasksInWorkflow);
 
         String taskId = idGenerator.generate();
         TaskMapperContext taskMapperContext =
@@ -866,6 +867,12 @@ public class DeciderService {
         // fork.
         // A new task must only be scheduled if a task, with the same reference name is not already
         // in this workflow instance
+        LOGGER.info("DeciderService getTasksToBeScheduled filtered tasks by referenceName {}", taskMappers
+                .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
+                .getMappedTasks(taskMapperContext)
+                .stream()
+                .filter(task -> !tasksInWorkflow.contains(task.getReferenceTaskName()))
+                .collect(Collectors.toList()));
         return taskMappers
                 .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
                 .getMappedTasks(taskMapperContext)

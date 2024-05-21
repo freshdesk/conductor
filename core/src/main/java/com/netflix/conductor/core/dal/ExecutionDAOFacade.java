@@ -291,6 +291,10 @@ public class ExecutionDAOFacade {
             workflowModel.setEndTime(System.currentTimeMillis());
         }
         externalizeWorkflowData(workflowModel);
+        LOGGER.debug(
+                "Updating workflow: {} in the ExecutionFacadeDao with status {} ",
+                workflowModel.getWorkflowId(),
+                workflowModel.getStatus());
         executionDAO.updateWorkflow(workflowModel);
         if (properties.isAsyncIndexingEnabled()) {
             if (workflowModel.getStatus().isTerminal()
@@ -322,6 +326,10 @@ public class ExecutionDAOFacade {
         } else {
             indexDAO.indexWorkflow(new WorkflowSummary(workflowModel.toWorkflow()));
         }
+        LOGGER.debug(
+                "Updated workflow: {} in the ExecutionFacadeDao with status {} ",
+                workflowModel.getWorkflowId(),
+                workflowModel.getStatus());
         return workflowModel.getWorkflowId();
     }
 

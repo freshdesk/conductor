@@ -556,6 +556,7 @@ public class WorkflowExecutor {
 
         executionLockService.releaseLock(workflow.getWorkflowId());
         executionLockService.deleteLock(workflow.getWorkflowId());
+        LOGGER.debug("Completed workflow execution && released all the locks for {}", workflow.getWorkflowId());
         return workflow;
     }
 
