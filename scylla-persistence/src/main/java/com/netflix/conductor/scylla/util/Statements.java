@@ -164,6 +164,7 @@ public class Statements {
                 .all()
                 .from(keyspace, TABLE_WORKFLOW_DEFS)
                 .where(eq(WORKFLOW_DEF_NAME_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -176,6 +177,7 @@ public class Statements {
                 .all()
                 .from(keyspace, TABLE_WORKFLOW_DEFS_INDEX)
                 .where(eq(WORKFLOW_DEF_INDEX_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -184,6 +186,7 @@ public class Statements {
                 .all()
                 .from(keyspace, TABLE_WORKFLOW_DEFS_INDEX)
                 .where(eq(WORKFLOW_DEF_INDEX_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -204,15 +207,11 @@ public class Statements {
      *     table
      */
     public String getSelectAllTaskDefsStatement() {
-        System.out.println("getSelectAllTaskDefsStatement" + QueryBuilder.select()
-                .all()
-                .from(keyspace, TABLE_TASK_DEFS)
-                .where(eq(TASK_DEFS_KEY, bindMarker()))
-                .getQueryString());
         return QueryBuilder.select()
                 .all()
                 .from(keyspace, TABLE_TASK_DEFS)
                 .where(eq(TASK_DEFS_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -433,6 +432,7 @@ public class Statements {
                 .from(keyspace, TABLE_WORKFLOWS)
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
                 .and(eq(SHARD_ID_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -478,6 +478,7 @@ public class Statements {
                 .all()
                 .from(keyspace, TABLE_TASK_DEF_LIMIT)
                 .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -491,6 +492,7 @@ public class Statements {
                 .from(keyspace, TABLE_EVENT_EXECUTIONS)
                 .where(eq(MESSAGE_ID_KEY, bindMarker()))
                 .and(eq(EVENT_HANDLER_NAME_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
@@ -676,6 +678,7 @@ public class Statements {
                 .all()
                 .from(keyspace, TABLE_EVENT_HANDLERS)
                 .where(eq(HANDLERS_KEY, bindMarker()))
+                .allowFiltering()
                 .getQueryString();
     }
 
