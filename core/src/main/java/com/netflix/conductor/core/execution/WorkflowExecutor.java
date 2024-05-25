@@ -1055,9 +1055,9 @@ public class WorkflowExecutor {
 
             List<TaskModel> tasksToBeScheduled = outcome.tasksToBeScheduled;
             setTaskDomains(tasksToBeScheduled, workflow);
-            LOGGER.info("WorkflowExecutor decide tasksToBeScheduled {}", tasksToBeScheduled);
+            LOGGER.info("WorkflowExecutor decide tasksToBeScheduled {}", tasksToBeScheduled.stream().map(TaskModel::getReferenceTaskName).toList());
             List<TaskModel> tasksToBeUpdated = outcome.tasksToBeUpdated;
-            LOGGER.info("WorkflowExecutor decide tasksToBeUpdated {}", tasksToBeUpdated);
+            LOGGER.info("WorkflowExecutor decide tasksToBeUpdated {}", tasksToBeUpdated.stream().map(TaskModel::getReferenceTaskName).toList());
 
             tasksToBeScheduled = dedupAndAddTasks(workflow, tasksToBeScheduled);
 
@@ -1202,7 +1202,6 @@ public class WorkflowExecutor {
 
     @VisibleForTesting
     List<TaskModel> dedupAndAddTasks(WorkflowModel workflow, List<TaskModel> tasks) {
-        LOGGER.info("WorkflowExecutor received dedupAndAddTasks  {}", tasks);
         Set<String> tasksInWorkflow =
                 workflow.getTasks().stream()
                         .map(task -> task.getReferenceTaskName() + "_" + task.getRetryCount())
@@ -1217,8 +1216,6 @@ public class WorkflowExecutor {
                                                         + "_"
                                                         + task.getRetryCount()))
                         .collect(Collectors.toList());
-
-        LOGGER.info("WorkflowExecutor dedupAndAddTasks  {}", dedupedTasks);
         workflow.getTasks().addAll(dedupedTasks);
         return dedupedTasks;
     }
@@ -1449,15 +1446,22 @@ public class WorkflowExecutor {
         List<TaskModel> filteredTasks;
         boolean startedSystemTasks = false;
 
-        LOGGER.info("WorkflowExecutor scheduleTask {}", tasks);
+        LOGGER.info("WorkflowExecutor received tasks for scheduleTask {}", tasks.stream().map(TaskModel::getReferenceTaskName).toList());
 
         try {
             if (tasks == null || tasks.isEmpty()) {
                 return false;
             }
-            WorkflowModel workflowScylla = getWorkflow( workflow.getWorkflowId(),  true);
-            List<String> dbTaskInWorkflows = workflowScylla.getTasks().stream().map(tsk -> tsk.getReferenceTaskName()).toList();
-            filteredTasks = tasks.stream().filter(tsk -> !dbTaskInWorkflows.contains(tsk.getReferenceTaskName())).toList();
+            List<String> dbTaskInWorkflows = new ArrayList<>();
+            try {
+                WorkflowModel workflowScylla = getWorkflow(workflow.getWorkflowId(), true);
+                dbTaskInWorkflows = workflowScylla.getTasks().stream().map(tsk -> tsk.getReferenceTaskName()).toList();
+                LOGGER.info("WorkflowExecutor scheduleTask dbTaskInWorkflows {}", dbTaskInWorkflows);
+            } catch(Exception e) {
+                LOGGER.error("Error getting workflow from Scylla for workflowInstanceId {} and error {}", workflow.getWorkflowId(), e);
+            }
+            List<String> finalDbTaskInWorkflows = dbTaskInWorkflows;
+            filteredTasks = tasks.stream().filter(tsk -> !finalDbTaskInWorkflows.contains(tsk.getReferenceTaskName())).toList();
 
             // Get the highest seq number
             int count = workflow.getTasks().stream().mapToInt(TaskModel::getSeq).max().orElse(0);
