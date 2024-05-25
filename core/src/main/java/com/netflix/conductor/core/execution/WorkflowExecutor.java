@@ -1444,16 +1444,20 @@ public class WorkflowExecutor {
     }
 
     @VisibleForTesting
-    boolean scheduleTask(WorkflowModel workflow, List<TaskModel> tasks) {
+    synchronized boolean scheduleTask(WorkflowModel workflow, List<TaskModel> tasks) {
         List<TaskModel> tasksToBeQueued;
+        List<TaskModel> filteredTasks;
         boolean startedSystemTasks = false;
 
-        LOGGER.info("WorkflowExecutor decide scheduleTask {}", tasks);
+        LOGGER.info("WorkflowExecutor scheduleTask {}", tasks);
 
         try {
             if (tasks == null || tasks.isEmpty()) {
                 return false;
             }
+            WorkflowModel workflowScylla = getWorkflow( workflow.getWorkflowId(),  true);
+            List<String> dbTaskInWorkflows = workflowScylla.getTasks().stream().map(tsk -> tsk.getReferenceTaskName()).toList();
+            filteredTasks = tasks.stream().filter(tsk -> !dbTaskInWorkflows.contains(tsk.getReferenceTaskName())).toList();
 
             // Get the highest seq number
             int count = workflow.getTasks().stream().mapToInt(TaskModel::getSeq).max().orElse(0);
@@ -1472,19 +1476,21 @@ public class WorkflowExecutor {
 
 
             // Save the tasks in the DAO
-            executionDAOFacade.createTasks(tasks);
+            executionDAOFacade.createTasks(filteredTasks);
 
             List<TaskModel> systemTasks =
-                    tasks.stream()
+                    filteredTasks.stream()
                             .filter(task -> systemTaskRegistry.isSystemTask(task.getTaskType()))
                             .collect(Collectors.toList());
 
-            LOGGER.info("WorkflowExecutor decide scheduleTask systemTasks {}", systemTasks);
+            LOGGER.info("WorkflowExecutor scheduleTask systemTasks {}", systemTasks);
 
             tasksToBeQueued =
-                    tasks.stream()
+                    filteredTasks.stream()
                             .filter(task -> !systemTaskRegistry.isSystemTask(task.getTaskType()))
                             .collect(Collectors.toList());
+
+            LOGGER.info("WorkflowExecutor scheduleTask customTasks {}", tasksToBeQueued);
 
             // Traverse through all the system tasks, start the sync tasks, in case of async queue
             // the tasks

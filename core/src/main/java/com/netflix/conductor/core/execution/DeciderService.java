@@ -828,7 +828,7 @@ public class DeciderService {
         return getTasksToBeScheduled(workflow, taskToSchedule, retryCount, null);
     }
 
-    public synchronized List<TaskModel> getTasksToBeScheduled(
+    public List<TaskModel> getTasksToBeScheduled(
             WorkflowModel workflow,
             WorkflowTask taskToSchedule,
             int retryCount,
@@ -849,7 +849,7 @@ public class DeciderService {
                                                 || runningTask.getStatus().isTerminal())
                         .map(TaskModel::getReferenceTaskName)
                         .collect(Collectors.toList());
-        LOGGER.info("DeciderService getTasksToBeScheduled tasksInWorkflow {}", taskToSchedule);
+        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule);
         LOGGER.info("DeciderService getTasksToBeScheduled tasksInWorkflow {}", tasksInWorkflow);
 
         String taskId = idGenerator.generate();
