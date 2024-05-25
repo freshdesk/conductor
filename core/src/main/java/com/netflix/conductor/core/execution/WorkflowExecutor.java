@@ -1055,7 +1055,9 @@ public class WorkflowExecutor {
 
             List<TaskModel> tasksToBeScheduled = outcome.tasksToBeScheduled;
             setTaskDomains(tasksToBeScheduled, workflow);
+            LOGGER.info("WorkflowExecutor decide tasksToBeScheduled {}", tasksToBeScheduled);
             List<TaskModel> tasksToBeUpdated = outcome.tasksToBeUpdated;
+            LOGGER.info("WorkflowExecutor decide tasksToBeUpdated {}", tasksToBeUpdated);
 
             tasksToBeScheduled = dedupAndAddTasks(workflow, tasksToBeScheduled);
 
@@ -1200,6 +1202,7 @@ public class WorkflowExecutor {
 
     @VisibleForTesting
     List<TaskModel> dedupAndAddTasks(WorkflowModel workflow, List<TaskModel> tasks) {
+        LOGGER.info("WorkflowExecutor received dedupAndAddTasks  {}", tasks);
         Set<String> tasksInWorkflow =
                 workflow.getTasks().stream()
                         .map(task -> task.getReferenceTaskName() + "_" + task.getRetryCount())
@@ -1215,6 +1218,7 @@ public class WorkflowExecutor {
                                                         + task.getRetryCount()))
                         .collect(Collectors.toList());
 
+        LOGGER.info("WorkflowExecutor dedupAndAddTasks  {}", dedupedTasks);
         workflow.getTasks().addAll(dedupedTasks);
         return dedupedTasks;
     }
@@ -1360,8 +1364,8 @@ public class WorkflowExecutor {
             queueDAO.push(taskQueueName, task.getTaskId(), task.getWorkflowPriority(), 0);
         }
         LOGGER.debug(
-                "Added task {} with priority {} to queue {} with call back seconds {}",
-                task,
+                "Added taskRefName {} with priority {} to queue {} with call back seconds {}",
+                task.getReferenceTaskName(),
                 task.getWorkflowPriority(),
                 taskQueueName,
                 task.getCallbackAfterSeconds());
@@ -1444,6 +1448,8 @@ public class WorkflowExecutor {
         List<TaskModel> tasksToBeQueued;
         boolean startedSystemTasks = false;
 
+        LOGGER.info("WorkflowExecutor decide scheduleTask {}", tasks);
+
         try {
             if (tasks == null || tasks.isEmpty()) {
                 return false;
@@ -1464,6 +1470,7 @@ public class WorkflowExecutor {
                     workflow.getWorkflowName(),
                     String.valueOf(workflow.getWorkflowVersion()));
 
+
             // Save the tasks in the DAO
             executionDAOFacade.createTasks(tasks);
 
@@ -1471,6 +1478,8 @@ public class WorkflowExecutor {
                     tasks.stream()
                             .filter(task -> systemTaskRegistry.isSystemTask(task.getTaskType()))
                             .collect(Collectors.toList());
+
+            LOGGER.info("WorkflowExecutor decide scheduleTask systemTasks {}", systemTasks);
 
             tasksToBeQueued =
                     tasks.stream()
@@ -1492,6 +1501,7 @@ public class WorkflowExecutor {
                 }
                 if (!workflowSystemTask.isAsync()) {
                     try {
+                        LOGGER.info("WorkflowExecutor decide system tasks are not async task  {}", task);
                         // start execution of synchronous system tasks
                         workflowSystemTask.start(workflow, task, this);
                     } catch (Exception e) {
@@ -1506,6 +1516,7 @@ public class WorkflowExecutor {
                     startedSystemTasks = true;
                     executionDAOFacade.updateTask(task);
                 } else {
+                    LOGGER.info("WorkflowExecutor decide system tasks are async task  {}", task);
                     tasksToBeQueued.add(task);
                 }
             }

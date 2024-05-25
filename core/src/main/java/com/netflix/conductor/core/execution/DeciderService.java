@@ -106,6 +106,7 @@ public class DeciderService {
                 tasksToBeScheduled = new LinkedList<>();
             }
         }
+        LOGGER.info("DeciderService decide  tasksToBeScheduled after startWorkflow() {}", tasksToBeScheduled);
         return decide(workflow, tasksToBeScheduled);
     }
 
@@ -827,7 +828,7 @@ public class DeciderService {
         return getTasksToBeScheduled(workflow, taskToSchedule, retryCount, null);
     }
 
-    public List<TaskModel> getTasksToBeScheduled(
+    public synchronized List<TaskModel> getTasksToBeScheduled(
             WorkflowModel workflow,
             WorkflowTask taskToSchedule,
             int retryCount,
@@ -838,6 +839,7 @@ public class DeciderService {
 
         String type = taskToSchedule.getType();
 
+        LOGGER.info("DeciderService receive tasksInWorkflow {}", workflow.getTasks());
         // get tasks already scheduled (in progress/terminal) for  this workflow instance
         List<String> tasksInWorkflow =
                 workflow.getTasks().stream()
@@ -847,6 +849,7 @@ public class DeciderService {
                                                 || runningTask.getStatus().isTerminal())
                         .map(TaskModel::getReferenceTaskName)
                         .collect(Collectors.toList());
+        LOGGER.info("DeciderService getTasksToBeScheduled tasksInWorkflow {}", taskToSchedule);
         LOGGER.info("DeciderService getTasksToBeScheduled tasksInWorkflow {}", tasksInWorkflow);
 
         String taskId = idGenerator.generate();
@@ -872,6 +875,7 @@ public class DeciderService {
                 .getMappedTasks(taskMapperContext)
                 .stream()
                 .filter(task -> !tasksInWorkflow.contains(task.getReferenceTaskName()))
+                        .map(task -> task.getReferenceTaskName())
                 .collect(Collectors.toList()));
         return taskMappers
                 .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
