@@ -238,13 +238,25 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         try {
             WorkflowMetadata workflowMetadata = getWorkflowMetadata(workflowId,corelationId);
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
-            // update the task_lookup table
-            // update the workflow_lookup table
+            // added check to avoid the duplicate instances execution in the same workflow
+            Map<String,TaskModel> filteredTaskMap = new HashMap();
+            LOGGER.info("Received tasks list size {} for given workflow instanceId {},totalTasks {} and tasks :: {} ",tasks.size(),workflowUUID, totalTasks ,tasks);
+            for(TaskModel task: tasks)
+            {
+                if(!filteredTaskMap.containsKey(task.getReferenceTaskName()))
+                    filteredTaskMap.put(task.getReferenceTaskName(),task);
+
+            }
+            tasks = filteredTaskMap.values().stream().toList();
+            totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
+            LOGGER.info("Filtered tasks list size {} for given workflow instanceId {},totalTasks {} and tasks :: {} ",tasks.size(), workflowUUID, totalTasks, tasks);
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
+                        // update the task_lookup table
+                        // update the workflow_lookup table
                         session.execute(
                                 updateTaskLookupStatement.bind(
                                         workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
