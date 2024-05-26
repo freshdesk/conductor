@@ -833,13 +833,27 @@ public class DeciderService {
             WorkflowTask taskToSchedule,
             int retryCount,
             String retriedTaskId) {
+
+        String type = taskToSchedule.getType();
+
+        if(Objects.nonNull(type) && Objects.equals(type,TaskType.SWITCH.name())){
+            try {
+                LOGGER.info("DeciderService getTasksToBeScheduled waiting for Switch");
+                Thread.sleep(1000);
+                LOGGER.info("DeciderService getTasksToBeScheduled waiting completed for Switch");
+            }catch (InterruptedException ex) {
+                LOGGER.error("Error in getTasksToBeScheduled while waiting for Switch", ex);
+            }
+        }
+
         Map<String, Object> input =
                 parametersUtils.getTaskInput(
                         taskToSchedule.getInputParameters(), workflow, null, null);
 
-        String type = taskToSchedule.getType();
 
-        LOGGER.info("DeciderService receive tasksInWorkflow {}", workflow.getTasks());
+
+        LOGGER.info("DeciderService getTasksToBeScheduled in workflow {}", workflow.getTasks().stream().map(TaskModel::getReferenceTaskName).
+                toList());
         // get tasks already scheduled (in progress/terminal) for  this workflow instance
         List<String> tasksInWorkflow =
                 workflow.getTasks().stream()
@@ -849,8 +863,8 @@ public class DeciderService {
                                                 || runningTask.getStatus().isTerminal())
                         .map(TaskModel::getReferenceTaskName)
                         .collect(Collectors.toList());
-        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule);
-        LOGGER.info("DeciderService getTasksToBeScheduled tasksInWorkflow {}", tasksInWorkflow);
+        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule.getTaskReferenceName());
+        LOGGER.info("DeciderService getTasksToBeScheduled running-inprogress tasksInWorkflow {}", tasksInWorkflow);
 
         String taskId = idGenerator.generate();
         TaskMapperContext taskMapperContext =
@@ -870,13 +884,6 @@ public class DeciderService {
         // fork.
         // A new task must only be scheduled if a task, with the same reference name is not already
         // in this workflow instance
-        LOGGER.info("DeciderService getTasksToBeScheduled filtered tasks by referenceName {}", taskMappers
-                .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
-                .getMappedTasks(taskMapperContext)
-                .stream()
-                .filter(task -> !tasksInWorkflow.contains(task.getReferenceTaskName()))
-                        .map(task -> task.getReferenceTaskName())
-                .collect(Collectors.toList()));
         return taskMappers
                 .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
                 .getMappedTasks(taskMapperContext)

@@ -1452,17 +1452,6 @@ public class WorkflowExecutor {
             if (tasks == null || tasks.isEmpty()) {
                 return false;
             }
-            List<String> dbTaskInWorkflows = new ArrayList<>();
-            try {
-                WorkflowModel workflowScylla = getWorkflow(workflow.getWorkflowId(), true);
-                dbTaskInWorkflows = workflowScylla.getTasks().stream().map(tsk -> tsk.getReferenceTaskName()).toList();
-                LOGGER.info("WorkflowExecutor scheduleTask dbTaskInWorkflows {}", dbTaskInWorkflows);
-            } catch(Exception e) {
-                LOGGER.error("Error getting workflow from Scylla for workflowInstanceId {} and error {}", workflow.getWorkflowId(), e);
-            }
-            List<String> finalDbTaskInWorkflows = dbTaskInWorkflows;
-            filteredTasks = tasks.stream().filter(tsk -> !finalDbTaskInWorkflows.contains(tsk.getReferenceTaskName())).toList();
-
             // Get the highest seq number
             int count = workflow.getTasks().stream().mapToInt(TaskModel::getSeq).max().orElse(0);
 
@@ -1480,17 +1469,17 @@ public class WorkflowExecutor {
 
 
             // Save the tasks in the DAO
-            executionDAOFacade.createTasks(filteredTasks);
+            executionDAOFacade.createTasks(tasks);
 
             List<TaskModel> systemTasks =
-                    filteredTasks.stream()
+                    tasks.stream()
                             .filter(task -> systemTaskRegistry.isSystemTask(task.getTaskType()))
                             .collect(Collectors.toList());
 
             LOGGER.info("WorkflowExecutor scheduleTask systemTasks {}", systemTasks);
 
             tasksToBeQueued =
-                    filteredTasks.stream()
+                    tasks.stream()
                             .filter(task -> !systemTaskRegistry.isSystemTask(task.getTaskType()))
                             .collect(Collectors.toList());
 

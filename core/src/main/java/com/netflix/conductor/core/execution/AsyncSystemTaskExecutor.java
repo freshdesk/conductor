@@ -79,7 +79,7 @@ public class AsyncSystemTaskExecutor {
             return;
         }
 
-        LOGGER.debug("Task: {} fetched from execution DAO for taskId: {}", task, taskId);
+        LOGGER.debug("Task: {} fetched from execution DAO for taskId: {}", task.getReferenceTaskName(), taskId);
         String queueName = QueueUtils.getQueueName(task);
         if (task.getStatus().isTerminal()) {
             // Tune the SystemTaskWorkerCoordinator's queues - if the queue size is very big this
