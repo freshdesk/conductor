@@ -1443,7 +1443,6 @@ public class WorkflowExecutor {
     @VisibleForTesting
     synchronized boolean scheduleTask(WorkflowModel workflow, List<TaskModel> tasks) {
         List<TaskModel> tasksToBeQueued;
-        List<TaskModel> filteredTasks;
         boolean startedSystemTasks = false;
 
         LOGGER.info("WorkflowExecutor received tasks for scheduleTask {}", tasks.stream().map(TaskModel::getReferenceTaskName).toList());

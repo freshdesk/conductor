@@ -17,7 +17,7 @@ import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.Metrics;
 
 // This class loads all the configurations related to prometheus. 
-@Configuration
+//@Configuration
 public class PrometheusIntegrationConfig
         implements CommandLineRunner {
 
@@ -30,7 +30,7 @@ public class PrometheusIntegrationConfig
 
     @Override
     public void run(String... args) throws Exception {
-        setupPrometheusRegistry();
+       // setupPrometheusRegistry();
     }
 
     /**

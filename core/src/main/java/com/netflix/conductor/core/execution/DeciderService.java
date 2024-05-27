@@ -14,6 +14,7 @@ package com.netflix.conductor.core.execution;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -66,7 +67,7 @@ public class DeciderService {
     private final SystemTaskRegistry systemTaskRegistry;
     private final long taskPendingTimeThresholdMins;
 
-    private final Map<String, TaskMapper> taskMappers;
+    private  final Map<String, TaskMapper> taskMappers;
 
     public DeciderService(
             IDGenerator idGenerator,
@@ -833,63 +834,54 @@ public class DeciderService {
             WorkflowTask taskToSchedule,
             int retryCount,
             String retriedTaskId) {
+        AtomicReference<List<TaskModel>> taskModels = new AtomicReference<>();
+        synchronized (DeciderService.class) {
+            String type = taskToSchedule.getType();
+            LOGGER.info("DeciderService getTasksToBeScheduled synchronization mode :: " + Thread.currentThread().getName());
+            Map<String, Object> input =
+                    parametersUtils.getTaskInput(
+                            taskToSchedule.getInputParameters(), workflow, null, null);
+            LOGGER.info("DeciderService getTasksToBeScheduled workflowTasks {}", workflow.getTasks().stream().map(TaskModel::getReferenceTaskName)
+                            .toList());
+            // get tasks already scheduled (in progress/terminal) for  this workflow instance
+            List<String> tasksInWorkflow =
+                    workflow.getTasks().stream()
+                            .filter(
+                                    runningTask ->
+                                            runningTask.getStatus().equals(TaskModel.Status.IN_PROGRESS)
+                                                    || runningTask.getStatus().isTerminal())
+                            .map(TaskModel::getReferenceTaskName)
+                            .collect(Collectors.toList());
+            LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule.getTaskReferenceName());
+            LOGGER.info("DeciderService getTasksToBeScheduled running-inprogress tasksInWorkflow {}", tasksInWorkflow);
 
-        String type = taskToSchedule.getType();
+            String taskId = idGenerator.generate();
+            TaskMapperContext taskMapperContext =
+                    TaskMapperContext.newBuilder()
+                            .withWorkflowModel(workflow)
+                            .withTaskDefinition(taskToSchedule.getTaskDefinition())
+                            .withWorkflowTask(taskToSchedule)
+                            .withTaskInput(input)
+                            .withRetryCount(retryCount)
+                            .withRetryTaskId(retriedTaskId)
+                            .withTaskId(taskId)
+                            .withDeciderService(this)
+                            .build();
 
-        if(Objects.nonNull(type) && Objects.equals(type,TaskType.SWITCH.name())){
-            try {
-                LOGGER.info("DeciderService getTasksToBeScheduled waiting for Switch");
-                Thread.sleep(1000);
-                LOGGER.info("DeciderService getTasksToBeScheduled waiting completed for Switch");
-            }catch (InterruptedException ex) {
-                LOGGER.error("Error in getTasksToBeScheduled while waiting for Switch", ex);
-            }
+            // For static forks, each branch of the fork creates a join task upon completion for
+            // dynamic forks, a join task is created with the fork and also with each branch of the
+            // fork.
+            // A new task must only be scheduled if a task, with the same reference name is not already
+            // in this workflow instance
+            taskModels.set(taskMappers
+                    .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
+                    .getMappedTasks(taskMapperContext)
+                    .stream()
+                    .filter(task -> !tasksInWorkflow.contains(task.getReferenceTaskName()))
+                    .collect(Collectors.toList()));
         }
-
-        Map<String, Object> input =
-                parametersUtils.getTaskInput(
-                        taskToSchedule.getInputParameters(), workflow, null, null);
-
-
-
-        LOGGER.info("DeciderService getTasksToBeScheduled in workflow {}", workflow.getTasks().stream().map(TaskModel::getReferenceTaskName).
-                toList());
-        // get tasks already scheduled (in progress/terminal) for  this workflow instance
-        List<String> tasksInWorkflow =
-                workflow.getTasks().stream()
-                        .filter(
-                                runningTask ->
-                                        runningTask.getStatus().equals(TaskModel.Status.IN_PROGRESS)
-                                                || runningTask.getStatus().isTerminal())
-                        .map(TaskModel::getReferenceTaskName)
-                        .collect(Collectors.toList());
-        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule.getTaskReferenceName());
-        LOGGER.info("DeciderService getTasksToBeScheduled running-inprogress tasksInWorkflow {}", tasksInWorkflow);
-
-        String taskId = idGenerator.generate();
-        TaskMapperContext taskMapperContext =
-                TaskMapperContext.newBuilder()
-                        .withWorkflowModel(workflow)
-                        .withTaskDefinition(taskToSchedule.getTaskDefinition())
-                        .withWorkflowTask(taskToSchedule)
-                        .withTaskInput(input)
-                        .withRetryCount(retryCount)
-                        .withRetryTaskId(retriedTaskId)
-                        .withTaskId(taskId)
-                        .withDeciderService(this)
-                        .build();
-
-        // For static forks, each branch of the fork creates a join task upon completion for
-        // dynamic forks, a join task is created with the fork and also with each branch of the
-        // fork.
-        // A new task must only be scheduled if a task, with the same reference name is not already
-        // in this workflow instance
-        return taskMappers
-                .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
-                .getMappedTasks(taskMapperContext)
-                .stream()
-                .filter(task -> !tasksInWorkflow.contains(task.getReferenceTaskName()))
-                .collect(Collectors.toList());
+        LOGGER.info("DeciderService getTasksToBeScheduled scheduledTask {}", taskModels.get());
+        return taskModels.get();
     }
 
     private boolean isTaskSkipped(WorkflowTask taskToSchedule, WorkflowModel workflow) {
