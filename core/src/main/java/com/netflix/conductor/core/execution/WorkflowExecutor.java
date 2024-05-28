@@ -1054,7 +1054,9 @@ public class WorkflowExecutor {
 
             List<TaskModel> tasksToBeScheduled = outcome.tasksToBeScheduled;
             setTaskDomains(tasksToBeScheduled, workflow);
+            LOGGER.info("WorkflowExecutor decide tasksToBeScheduled {}", tasksToBeScheduled.stream().map(TaskModel::getReferenceTaskName).toList());
             List<TaskModel> tasksToBeUpdated = outcome.tasksToBeUpdated;
+            LOGGER.info("WorkflowExecutor decide tasksToBeUpdated {}", tasksToBeUpdated.stream().map(TaskModel::getReferenceTaskName).toList());
 
             tasksToBeScheduled = dedupAndAddTasks(workflow, tasksToBeScheduled);
 
@@ -1359,8 +1361,8 @@ public class WorkflowExecutor {
             queueDAO.push(taskQueueName, task.getTaskId(), task.getWorkflowPriority(), 0);
         }
         LOGGER.debug(
-                "Added task {} with priority {} to queue {} with call back seconds {}",
-                task,
+                "Added taskRefName {} with priority {} to queue {} with call back seconds {}",
+                task.getReferenceTaskName(),
                 task.getWorkflowPriority(),
                 taskQueueName,
                 task.getCallbackAfterSeconds());
@@ -1442,6 +1444,8 @@ public class WorkflowExecutor {
     boolean scheduleTask(WorkflowModel workflow, List<TaskModel> tasks) {
         List<TaskModel> tasksToBeQueued;
         boolean startedSystemTasks = false;
+
+        LOGGER.info("WorkflowExecutor received tasks for scheduleTask {}", tasks.stream().map(TaskModel::getReferenceTaskName).toList());
 
         try {
             if (tasks == null || tasks.isEmpty()) {

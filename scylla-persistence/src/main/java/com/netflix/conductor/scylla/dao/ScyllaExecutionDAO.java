@@ -238,13 +238,15 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         try {
             WorkflowMetadata workflowMetadata = getWorkflowMetadata(workflowId,corelationId);
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
-            // update the task_lookup table
-            // update the workflow_lookup table
+            LOGGER.info("createTasks  taskList size {} for given workflow instanceId {},totalTasks {} and tasks :: {} ",
+                    tasks.size(),workflowUUID, totalTasks ,tasks);
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
+                        // update the task_lookup table
+                        // update the workflow_lookup table
                         session.execute(
                                 updateTaskLookupStatement.bind(
                                         workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
@@ -542,12 +544,29 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
-            session.execute(
-                    updateWorkflowStatement.bind(
-                            payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
+            WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
+            LOGGER.debug(
+                    "prevWorkflow status updated for workflow_id {} is {}",
+                    prevWorkflow.getWorkflowId(),
+                    prevWorkflow.getStatus());
+            // Added this change to update the workflow only if it is not completed, Rerun cannot be done on completed workflows
+            if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+                session.execute(
+                        updateWorkflowStatement.bind(
+                                payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
+            } else {
+                LOGGER.info(
+                        "Workflow {} is already completed. Not updating the workflow current status {}",
+                        workflow.getWorkflowId(), workflow.getStatus());
+                return workflow.getWorkflowId();
+            }
+            LOGGER.debug(
+                    "Workflow status updated for workflow_id {} is {}",
+                    workflow.getWorkflowId(),
+                    workflow.getStatus());
             workflow.setTasks(tasks);
             return workflow.getWorkflowId();
-        } catch (DriverException e) {
+        } catch (Exception e) {
             Monitors.error(CLASS_NAME, "updateWorkflow");
             String errorMsg =
                     String.format("Failed to update workflow: %s", workflow.getWorkflowId());

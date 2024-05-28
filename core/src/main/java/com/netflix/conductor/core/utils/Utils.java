@@ -15,7 +15,10 @@ package com.netflix.conductor.core.utils;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.apache.commons.lang3.StringUtils;
 
 import com.netflix.conductor.core.exception.TransientException;
@@ -90,5 +93,15 @@ public class Utils {
             return throwable instanceof TransientException;
         }
         return true;
+    }
+
+    /**
+     * Get a new instance of Caffeine cache with the specified expiration and time unit.
+     * @param expiration
+     * @param timeUnit
+     * @return
+     */
+    public static Cache<String, Set<String>> getCaffeineCache(Integer expiration, TimeUnit timeUnit) {
+        return Caffeine.newBuilder().expireAfterWrite(expiration, timeUnit).build();
     }
 }

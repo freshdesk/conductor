@@ -14,8 +14,11 @@ package com.netflix.conductor.core.execution;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.netflix.conductor.core.utils.Utils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,17 +59,15 @@ import static com.netflix.conductor.model.TaskModel.Status.*;
 @Service
 @Trace
 public class DeciderService {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(DeciderService.class);
-
     private final IDGenerator idGenerator;
     private final ParametersUtils parametersUtils;
     private final ExternalPayloadStorageUtils externalPayloadStorageUtils;
     private final MetadataDAO metadataDAO;
     private final SystemTaskRegistry systemTaskRegistry;
     private final long taskPendingTimeThresholdMins;
-
     private final Map<String, TaskMapper> taskMappers;
+    private final Cache<String,Set<String>> wfInstanceCache;
 
     public DeciderService(
             IDGenerator idGenerator,
@@ -84,6 +85,7 @@ public class DeciderService {
         this.externalPayloadStorageUtils = externalPayloadStorageUtils;
         this.taskPendingTimeThresholdMins = taskPendingTimeThreshold.toMinutes();
         this.systemTaskRegistry = systemTaskRegistry;
+        this.wfInstanceCache = Utils.getCaffeineCache(24, TimeUnit.HOURS);
     }
 
     public DeciderOutcome decide(WorkflowModel workflow) throws TerminateWorkflowException {
@@ -106,6 +108,7 @@ public class DeciderService {
                 tasksToBeScheduled = new LinkedList<>();
             }
         }
+        LOGGER.info("DeciderService decide  tasksToBeScheduled after startWorkflow() {}", tasksToBeScheduled);
         return decide(workflow, tasksToBeScheduled);
     }
 
@@ -832,21 +835,25 @@ public class DeciderService {
             WorkflowTask taskToSchedule,
             int retryCount,
             String retriedTaskId) {
+        Set<String> tasksInWorkflowCached = new HashSet<>();
+        String type = taskToSchedule.getType();
         Map<String, Object> input =
                 parametersUtils.getTaskInput(
                         taskToSchedule.getInputParameters(), workflow, null, null);
 
-        String type = taskToSchedule.getType();
+        LOGGER.info("DeciderService getTasksToBeScheduled workflowTasks {}",
+                workflow.getTasks().stream().map(TaskModel::getReferenceTaskName)
+                .toList());
+        LOGGER.info("DeciderService getTasksToBeScheduled cached wfInstanceCache {} ",
+                wfInstanceCache.getIfPresent(workflow.getWorkflowId()));
 
-        // get tasks already scheduled (in progress/terminal) for  this workflow instance
-        List<String> tasksInWorkflow =
-                workflow.getTasks().stream()
-                        .filter(
-                                runningTask ->
-                                        runningTask.getStatus().equals(TaskModel.Status.IN_PROGRESS)
-                                                || runningTask.getStatus().isTerminal())
-                        .map(TaskModel::getReferenceTaskName)
-                        .collect(Collectors.toList());
+        if (wfInstanceCache.getIfPresent(workflow.getWorkflowId()) != null) {
+            tasksInWorkflowCached.addAll(wfInstanceCache.getIfPresent(workflow.getWorkflowId()));
+        }
+
+        LOGGER.info("Added tasks to tasksInWorkflowCached {} ", tasksInWorkflowCached);
+        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule.getTaskReferenceName());
+
 
         String taskId = idGenerator.generate();
         TaskMapperContext taskMapperContext =
@@ -866,12 +873,19 @@ public class DeciderService {
         // fork.
         // A new task must only be scheduled if a task, with the same reference name is not already
         // in this workflow instance
-        return taskMappers
+        List<TaskModel> taskModels = taskMappers
                 .getOrDefault(type, taskMappers.get(USER_DEFINED.name()))
                 .getMappedTasks(taskMapperContext)
                 .stream()
-                .filter(task -> !tasksInWorkflow.contains(task.getReferenceTaskName()))
+                .filter(task -> !tasksInWorkflowCached.contains(task.getReferenceTaskName()))
                 .collect(Collectors.toList());
+
+        if (taskModels.size() >= 1) {
+            tasksInWorkflowCached.addAll(taskModels.stream().map(TaskModel::getReferenceTaskName).toList());
+            wfInstanceCache.put(workflow.getWorkflowId(), tasksInWorkflowCached);
+        }
+
+        return taskModels;
     }
 
     private boolean isTaskSkipped(WorkflowTask taskToSchedule, WorkflowModel workflow) {
