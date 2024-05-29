@@ -85,7 +85,7 @@ public class DeciderService {
         this.externalPayloadStorageUtils = externalPayloadStorageUtils;
         this.taskPendingTimeThresholdMins = taskPendingTimeThreshold.toMinutes();
         this.systemTaskRegistry = systemTaskRegistry;
-        this.wfInstanceCache = Utils.getCaffeineCache(24, TimeUnit.HOURS);
+        this.wfInstanceCache = Utils.getCaffeineCache(6, TimeUnit.HOURS);
     }
 
     public DeciderOutcome decide(WorkflowModel workflow) throws TerminateWorkflowException {
@@ -841,18 +841,20 @@ public class DeciderService {
                 parametersUtils.getTaskInput(
                         taskToSchedule.getInputParameters(), workflow, null, null);
 
-        LOGGER.info("DeciderService getTasksToBeScheduled workflowTasks {}",
+        LOGGER.info("DeciderService getTasksToBeScheduled workflowTasks {} for workflow_id {} ",
                 workflow.getTasks().stream().map(TaskModel::getReferenceTaskName)
-                .toList());
-        LOGGER.info("DeciderService getTasksToBeScheduled cached wfInstanceCache {} ",
-                wfInstanceCache.getIfPresent(workflow.getWorkflowId()));
+                .toList(), workflow.getWorkflowId());
+        LOGGER.info("DeciderService getTasksToBeScheduled cached wfInstanceCache {} for workflow_id {} ",
+                wfInstanceCache.getIfPresent(workflow.getWorkflowId()), workflow.getWorkflowId());
 
         if (wfInstanceCache.getIfPresent(workflow.getWorkflowId()) != null) {
             tasksInWorkflowCached.addAll(wfInstanceCache.getIfPresent(workflow.getWorkflowId()));
         }
 
-        LOGGER.info("Added tasks to tasksInWorkflowCached {} ", tasksInWorkflowCached);
-        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}", taskToSchedule.getTaskReferenceName());
+        LOGGER.info("Added tasks to tasksInWorkflowCached {} for workflow_id {}",
+                tasksInWorkflowCached, workflow.getWorkflowId());
+        LOGGER.info("DeciderService getTasksToBeScheduled taskToSchedule {}, for workflow_id {}",
+                taskToSchedule.getTaskReferenceName(), workflow.getWorkflowId());
 
 
         String taskId = idGenerator.generate();

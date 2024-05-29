@@ -1445,7 +1445,8 @@ public class WorkflowExecutor {
         List<TaskModel> tasksToBeQueued;
         boolean startedSystemTasks = false;
 
-        LOGGER.info("WorkflowExecutor received tasks for scheduleTask {}", tasks.stream().map(TaskModel::getReferenceTaskName).toList());
+        LOGGER.info("WorkflowExecutor received tasks for scheduleTask {} for workflow_id {}",
+                tasks.stream().map(TaskModel::getReferenceTaskName).toList(),workflow.getWorkflowId());
 
         try {
             if (tasks == null || tasks.isEmpty()) {
