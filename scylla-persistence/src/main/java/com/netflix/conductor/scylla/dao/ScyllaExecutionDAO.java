@@ -542,13 +542,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             workflow.setTasks(new LinkedList<>());
             LOGGER.debug("Update workflow - getPrevious workflow status {}",getWorkflow(workflow.getWorkflowId(),false).getStatus());
             LOGGER.debug("Update workflow - current status {} for workflowId {} ",workflow.getStatus(),workflow.getWorkflowId());
+            WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
-            session.execute(
-                    updateWorkflowStatement.bind(
-                            payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
+            if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+                session.execute(updateWorkflowStatement.bind(payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
+            }
             workflow.setTasks(tasks);
             LOGGER.debug("Updated workflow - current status {} for workflowId {} ",workflow.getStatus(),workflow.getWorkflowId());
             return workflow.getWorkflowId();
