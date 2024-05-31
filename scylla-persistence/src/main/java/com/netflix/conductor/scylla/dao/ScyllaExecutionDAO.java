@@ -240,6 +240,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
             // update the task_lookup table
             // update the workflow_lookup table
+            LOGGER.debug("Create tasks list {} for workflowId {} ",tasks.stream()
+                            .map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),workflowId);
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
@@ -538,6 +540,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             List<TaskModel> tasks = workflow.getTasks();
             Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
             workflow.setTasks(new LinkedList<>());
+            LOGGER.debug("Update workflow - getPrevious workflow status {}",getWorkflow(workflow.getWorkflowId(),false).getStatus());
+            LOGGER.debug("Update workflow - current status {} for workflowId {} ",workflow.getStatus(),workflow.getWorkflowId());
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
@@ -546,6 +550,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     updateWorkflowStatement.bind(
                             payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
             workflow.setTasks(tasks);
+            LOGGER.debug("Updated workflow - current status {} for workflowId {} ",workflow.getStatus(),workflow.getWorkflowId());
             return workflow.getWorkflowId();
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateWorkflow");
