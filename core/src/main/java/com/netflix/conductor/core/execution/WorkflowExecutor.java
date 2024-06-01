@@ -320,6 +320,7 @@ public class WorkflowExecutor {
             parentWorkflow.setStatus(WorkflowModel.Status.RUNNING);
             parentWorkflow.setLastRetriedTime(System.currentTimeMillis());
             executionDAOFacade.updateWorkflow(parentWorkflow);
+            LOGGER.info("WE Update workflow 1 called", parentWorkflow.getWorkflowId());
             expediteLazyWorkflowEvaluation(parentWorkflowId);
 
             workflow = parentWorkflow;
@@ -378,6 +379,7 @@ public class WorkflowExecutor {
                 workflow.getPriority(),
                 properties.getWorkflowOffsetTimeout().getSeconds());
         executionDAOFacade.updateWorkflow(workflow);
+        LOGGER.info("WE Update workflow 2 called", workflow.getWorkflowId());
         LOGGER.info(
                 "Workflow {} that failed due to '{}' was retried",
                 workflow.toShortString(),
@@ -537,6 +539,7 @@ public class WorkflowExecutor {
                                 .collect(Collectors.toSet()));
 
         executionDAOFacade.updateWorkflow(workflow);
+        LOGGER.info("WE Update workflow 3 called", workflow.getWorkflowId());
         LOGGER.debug("Completed workflow execution for {}", workflow.getWorkflowId());
         workflowStatusListener.onWorkflowCompletedIfEnabled(workflow);
         Monitors.recordWorkflowCompletion(
@@ -619,6 +622,7 @@ public class WorkflowExecutor {
             String workflowId = workflow.getWorkflowId();
             workflow.setReasonForIncompletion(reason);
             executionDAOFacade.updateWorkflow(workflow);
+            LOGGER.info("WE Update workflow 4 called", workflow.getWorkflowId());
             workflowStatusListener.onWorkflowTerminatedIfEnabled(workflow);
             Monitors.recordWorkflowTermination(
                     workflow.getWorkflowName(), workflow.getStatus(), workflow.getOwnerApp());
@@ -681,6 +685,7 @@ public class WorkflowExecutor {
                             failureWorkflow, WorkflowContext.get().getClientApp());
                 }
                 executionDAOFacade.updateWorkflow(workflow);
+                LOGGER.info("WE Update workflow 5 called", workflow.getWorkflowId());
             }
             executionDAOFacade.removeFromPendingWorkflow(
                     workflow.getWorkflowName(), workflow.getWorkflowId());
@@ -1084,6 +1089,7 @@ public class WorkflowExecutor {
 
             if (!outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty()) {
                 executionDAOFacade.updateWorkflow(workflow);
+                LOGGER.info("WE Update workflow 6 called", workflow.getWorkflowId());
             }
 
             return workflow;
@@ -1236,6 +1242,7 @@ public class WorkflowExecutor {
             }
             workflow.setStatus(status);
             executionDAOFacade.updateWorkflow(workflow);
+            LOGGER.info("WE Update workflow 7 called", workflow.getWorkflowId());
         } finally {
             executionLockService.releaseLock(workflowId);
         }
@@ -1275,6 +1282,7 @@ public class WorkflowExecutor {
                 workflow.getPriority(),
                 properties.getWorkflowOffsetTimeout().getSeconds());
         executionDAOFacade.updateWorkflow(workflow);
+        LOGGER.info("WE Update workflow 8 called", workflow.getWorkflowId());
         decide(workflowId);
     }
 
@@ -1623,6 +1631,7 @@ public class WorkflowExecutor {
                     workflow.getPriority(),
                     properties.getWorkflowOffsetTimeout().getSeconds());
             executionDAOFacade.updateWorkflow(workflow);
+            LOGGER.info("WE Update workflow 9 called", workflow.getWorkflowId());
 
             decide(workflowId);
             return true;
@@ -1675,6 +1684,7 @@ public class WorkflowExecutor {
             // update tasks in datastore to update workflow-tasks relationship for archived
             // workflows
             executionDAOFacade.updateTasks(workflow.getTasks());
+            LOGGER.info("WE Update workflow 10 called", workflow.getWorkflowId());
             // Remove all tasks after the "rerunFromTask"
             List<TaskModel> filteredTasks = new ArrayList<>();
             for (TaskModel task : workflow.getTasks()) {

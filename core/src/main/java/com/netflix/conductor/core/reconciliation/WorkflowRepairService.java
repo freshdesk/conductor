@@ -92,12 +92,14 @@ public class WorkflowRepairService {
      * has relevant message in the queue.
      */
     public boolean verifyAndRepairWorkflow(String workflowId, boolean includeTasks) {
+        LOGGER.info("Triggered verifyAndRepairWorkflow for workflowId {} with includeTasks {} ", workflowId, includeTasks);
         WorkflowModel workflow = executionDAO.getWorkflow(workflowId, includeTasks);
         AtomicBoolean repaired = new AtomicBoolean(false);
         repaired.set(verifyAndRepairDeciderQueue(workflow));
         if (includeTasks) {
             workflow.getTasks().forEach(task -> repaired.set(verifyAndRepairTask(task)));
         }
+        LOGGER.info("Triggered verifyAndRepairWorkflow for workflowId {} with repaired {} ", workflowId, repaired.get());
         return repaired.get();
     }
 
@@ -134,9 +136,13 @@ public class WorkflowRepairService {
      */
     @VisibleForTesting
     boolean verifyAndRepairTask(TaskModel task) {
+        LOGGER.info("Inside verifyAndRepairTask taskId {} for workflowId {}", task.getTaskId() , task.getWorkflowInstanceId());
         if (isTaskRepairable.test(task)) {
             // Ensure QueueDAO contains this taskId
+
+
             String taskQueueName = QueueUtils.getQueueName(task);
+            LOGGER.info("Inside verifyAndRepairTask for taskQueueName{} taskId {} for workflowId {}", taskQueueName, task.getTaskId() , task.getWorkflowInstanceId());
             if (!queueDAO.containsMessage(taskQueueName, task.getTaskId())) {
                 queueDAO.push(taskQueueName, task.getTaskId(), task.getCallbackAfterSeconds());
                 LOGGER.info(
@@ -164,6 +170,7 @@ public class WorkflowRepairService {
 
     private boolean verifyAndRepairWorkflow(String workflowId) {
         if (StringUtils.isNotEmpty(workflowId)) {
+            LOGGER.info("verifyAndRepairWorkflow {} called for workflowid {}", workflowId);
             String queueName = Utils.DECIDER_QUEUE;
             if (!queueDAO.containsMessage(queueName, workflowId)) {
                 queueDAO.push(
