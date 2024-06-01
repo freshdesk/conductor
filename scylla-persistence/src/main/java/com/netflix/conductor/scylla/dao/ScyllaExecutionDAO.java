@@ -540,17 +540,20 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             List<TaskModel> tasks = workflow.getTasks();
             Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
             workflow.setTasks(new LinkedList<>());
-            WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
-            LOGGER.debug("Update workflow - getPrevious workflow status {} for workflowId {} ",prevWorkflow.getStatus(),workflow.getWorkflowId());
-            LOGGER.debug("Update workflow - current status {} for workflowId {} ",workflow.getStatus(),workflow.getWorkflowId());
-            String payload = toJson(workflow);
-            recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
-            recordCassandraDaoPayloadSize(
-                    "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
-            if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
-                session.execute(updateWorkflowStatement.bind(payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
+            synchronized(this) {
+                WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
+                LOGGER.debug("Update workflow - getPrevious workflow status {} for workflowId {} ", prevWorkflow.getStatus(),
+                        workflow.getWorkflowId());
+                LOGGER.debug("Update workflow - current status {} for workflowId {} ", workflow.getStatus(), workflow.getWorkflowId());
+                String payload = toJson(workflow);
+                recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
+                recordCassandraDaoPayloadSize(
+                        "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
+                if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+                    session.execute(updateWorkflowStatement.bind(payload, UUID.fromString(workflow.getWorkflowId()), correlationId));
+                }
+                workflow.setTasks(tasks);
             }
-            workflow.setTasks(tasks);
             LOGGER.debug("Updated workflow - current status {} for workflowId {} ",workflow.getStatus(),workflow.getWorkflowId());
             return workflow.getWorkflowId();
         } catch (DriverException e) {
