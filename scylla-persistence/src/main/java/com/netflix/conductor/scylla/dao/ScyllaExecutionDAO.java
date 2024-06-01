@@ -44,6 +44,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaExecutionDAO.class);
     private static final String CLASS_NAME = ScyllaExecutionDAO.class.getSimpleName();
+    private static final Object lock = new Object();
 
     protected final PreparedStatement insertWorkflowStatement;
     protected final PreparedStatement insertTaskStatement;
@@ -345,6 +346,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
+            LOGGER.debug("Received updateTask for task {} in workflow {} ", task.getTaskId(), task.getWorkflowInstanceId());
             session.execute(
                     insertTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
@@ -540,7 +542,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             List<TaskModel> tasks = workflow.getTasks();
             Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
             workflow.setTasks(new LinkedList<>());
-            synchronized(this) {
+            synchronized(lock) {
                 WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
                 LOGGER.debug("Update workflow - getPrevious workflow status {} for workflowId {} ", prevWorkflow.getStatus(),
                         workflow.getWorkflowId());

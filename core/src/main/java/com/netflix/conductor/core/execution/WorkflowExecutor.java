@@ -728,7 +728,8 @@ public class WorkflowExecutor {
                                                 "No such task found by id: %s",
                                                 taskResult.getTaskId()));
 
-        LOGGER.debug("Task: {} belonging to Workflow {} being updated", task, workflowInstance);
+        LOGGER.debug("WE updateTask: taskId {} belonging to workflowId {} being updated with workflowStatus {}",
+                task.getTaskId(), workflowInstance, workflowInstance.getStatus());
 
         String taskQueueName = QueueUtils.getQueueName(task);
 
@@ -736,7 +737,7 @@ public class WorkflowExecutor {
             // Task was already updated....
             queueDAO.remove(taskQueueName, taskResult.getTaskId());
             LOGGER.info(
-                    "Task: {} has already finished execution with status: {} within workflow: {}. Removed task from queue: {}",
+                    "WE Task: {} has already finished execution with status: {} within workflow: {}. Removed task from queue: {}",
                     task.getTaskId(),
                     task.getStatus(),
                     task.getWorkflowInstanceId(),
@@ -750,7 +751,7 @@ public class WorkflowExecutor {
             // Workflow is in terminal state
             queueDAO.remove(taskQueueName, taskResult.getTaskId());
             LOGGER.info(
-                    "Workflow: {} has already finished execution. Task update for: {} ignored and removed from Queue: {}.",
+                    "WE workflowId: {} has already finished execution. Task update for taskId : {} ignored and removed from Queue: {}.",
                     workflowInstance,
                     taskResult.getTaskId(),
                     taskQueueName);
