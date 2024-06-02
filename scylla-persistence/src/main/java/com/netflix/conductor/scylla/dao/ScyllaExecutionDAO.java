@@ -562,11 +562,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         UUID.fromString(workflow.getWorkflowId()),
                         correlationId, currentVersion));
                 if (resultSet.wasApplied()) {
+                    LOGGER.debug("Updated workflow - current status {} for workflowId {} with version {} ",
+                            workflow.getStatus(), workflow.getWorkflowId(), currentVersion + 1);
                     workflow.setTasks(tasks);
                 } else {
 
                     LOGGER.debug("Concurrent update detected, update failed for workflow: {} with version {}",
                             workflow.getWorkflowId(), currentVersion);
+
                     WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId(), false);
                     int retriedVersion = retriedWorkflow.getVersion();
 
@@ -575,9 +578,11 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                                 UUID.fromString(workflow.getWorkflowId()),
                                 correlationId, retriedVersion));
                         if (retriedResultSet.wasApplied()) {
+                            LOGGER.debug("Updated workflow - current status {} for workflowId {} with retriedVersion {} ",
+                                    workflow.getStatus(), workflow.getWorkflowId(), retriedVersion + 1);
                             workflow.setTasks(tasks);
                         } else {
-                            LOGGER.debug("Concurrent update detected, update failed for workflow: {} with version {}",
+                            LOGGER.debug("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
                                     workflow.getWorkflowId(), retriedVersion);
                         }
                         //throw new TransientException("Concurrent update detected, update failed for workflow: " + workflow.getWorkflowId());
@@ -585,8 +590,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                 }
             }
                 //workflow.setTasks(tasks);
-                LOGGER.debug("Updated workflow - current status {} for workflowId {} with version {} ",
-                        workflow.getStatus(), workflow.getWorkflowId(), currentVersion + 1);
+
                 return workflow.getWorkflowId();
             } catch (DriverException e) {
                 Monitors.error(CLASS_NAME, "updateWorkflow");
