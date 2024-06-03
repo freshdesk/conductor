@@ -127,14 +127,10 @@ public class TaskServiceImpl implements TaskService {
      * @return task Id of the updated task.
      */
     public String updateTask(TaskResult taskResult) {
-        LOGGER.debug(
-                "Update Task: {} with callback time: {}",
-                taskResult,
-                taskResult.getCallbackAfterSeconds());
         executionService.updateTask(taskResult);
         LOGGER.debug(
-                "Task: {} updated successfully with callback time: {}",
-                taskResult,
+                "TaskServiceImpl Task: {} updated successfully with callback time: {}",
+                taskResult.getTaskId(),
                 taskResult.getCallbackAfterSeconds());
         return taskResult.getTaskId();
     }

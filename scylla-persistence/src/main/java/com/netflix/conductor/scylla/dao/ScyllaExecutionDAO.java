@@ -346,7 +346,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
-            LOGGER.debug("Received updateTask for task {} in workflow {} ", task.getTaskId(), task.getWorkflowInstanceId());
+            LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} ",
+                    task.getTaskId(),task.getStatus(), task.getWorkflowInstanceId(),task.getReferenceTaskName());
             session.execute(
                     insertTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
@@ -585,21 +586,18 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                             LOGGER.debug("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
                                     workflow.getWorkflowId(), retriedVersion);
                         }
-                        //throw new TransientException("Concurrent update detected, update failed for workflow: " + workflow.getWorkflowId());
                     }
                 }
             }
-                //workflow.setTasks(tasks);
-
-                return workflow.getWorkflowId();
-            } catch (DriverException e) {
-                Monitors.error(CLASS_NAME, "updateWorkflow");
-                String errorMsg =
-                        String.format("Failed to update workflow: %s", workflow.getWorkflowId());
-                LOGGER.error(errorMsg, e);
-                throw new TransientException(errorMsg);
-            }
+            return workflow.getWorkflowId();
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "updateWorkflow");
+            String errorMsg =
+                    String.format("Failed to update workflow: %s", workflow.getWorkflowId());
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg);
         }
+    }
 
     @Override
     public boolean removeWorkflow(String workflowId) {

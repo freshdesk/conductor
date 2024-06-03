@@ -728,8 +728,8 @@ public class WorkflowExecutor {
                                                 "No such task found by id: %s",
                                                 taskResult.getTaskId()));
 
-        LOGGER.debug("WE updateTask: taskId {} belonging to workflowId {} being updated with workflowStatus {}",
-                task.getTaskId(), workflowInstance, workflowInstance.getStatus());
+        LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
+                task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
 
         String taskQueueName = QueueUtils.getQueueName(task);
 
@@ -737,7 +737,7 @@ public class WorkflowExecutor {
             // Task was already updated....
             queueDAO.remove(taskQueueName, taskResult.getTaskId());
             LOGGER.info(
-                    "WE Task: {} has already finished execution with status: {} within workflow: {}. Removed task from queue: {}",
+                    "WE updateTask Task: {} has already finished execution with status: {} within workflow: {}. Removed task from queue: {}",
                     task.getTaskId(),
                     task.getStatus(),
                     task.getWorkflowInstanceId(),
@@ -751,7 +751,7 @@ public class WorkflowExecutor {
             // Workflow is in terminal state
             queueDAO.remove(taskQueueName, taskResult.getTaskId());
             LOGGER.info(
-                    "WE workflowId: {} has already finished execution. Task update for taskId : {} ignored and removed from Queue: {}.",
+                    "WE updateTask workflowId: {} has already finished execution. Task update for taskId : {} ignored and removed from Queue: {}.",
                     workflowInstance,
                     taskResult.getTaskId(),
                     taskQueueName);
@@ -843,6 +843,8 @@ public class WorkflowExecutor {
 
         // Throw a TransientException if below operations fail to avoid workflow inconsistencies.
         try {
+            LOGGER.debug("WE calling SED.updateTask: taskId {} with taskStatus {} belonging to workflowId {} and workflowStatus {}",
+                    task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
             executionDAOFacade.updateTask(task);
         } catch (Exception e) {
             String errorMsg =

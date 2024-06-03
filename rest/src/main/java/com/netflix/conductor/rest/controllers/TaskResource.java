@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -43,7 +45,7 @@ import static org.springframework.http.MediaType.TEXT_PLAIN_VALUE;
 @RestController
 @RequestMapping(value = TASKS)
 public class TaskResource {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(TaskResource.class);
     private final TaskService taskService;
 
     public TaskResource(TaskService taskService) {
@@ -80,6 +82,8 @@ public class TaskResource {
     @PostMapping(produces = TEXT_PLAIN_VALUE)
     @Operation(summary = "Update a task")
     public String updateTask(@RequestBody TaskResult taskResult) {
+        LOGGER.info("Received updateTask for task: {},for workflowInstanceId {} and status {} ",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus());
         return taskService.updateTask(taskResult);
     }
 
