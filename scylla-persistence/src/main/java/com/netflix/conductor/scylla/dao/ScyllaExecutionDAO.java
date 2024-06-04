@@ -550,13 +550,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             LOGGER.debug("Update workflow - current status {} for workflowId {} ", workflow.getStatus(), workflow.getWorkflowId());
 
             // Check version and update the workflow
-            int currentVersion = prevWorkflow.getVersion();
+            Integer currentVersion = prevWorkflow.getVersion() == 0 ? null : prevWorkflow.getVersion();
 
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
-
 
             if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
                 ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, currentVersion + 1,
@@ -572,7 +571,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                             workflow.getWorkflowId(), currentVersion);
 
                     WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId(), false);
-                    int retriedVersion = retriedWorkflow.getVersion();
+
+                    Integer retriedVersion = retriedWorkflow.getVersion() == 0 ? null : prevWorkflow.getVersion();
 
                     if (!retriedWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
                         ResultSet retriedResultSet = session.execute(updateWorkflowStatement.bind(payload, retriedVersion + 1,
@@ -583,7 +583,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                                     workflow.getStatus(), workflow.getWorkflowId(), retriedVersion + 1);
                             workflow.setTasks(tasks);
                         } else {
-                            LOGGER.debug("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
+                            LOGGER.info("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
                                     workflow.getWorkflowId(), retriedVersion);
                         }
                     }
