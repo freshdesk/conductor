@@ -92,14 +92,13 @@ public class WorkflowRepairService {
      * has relevant message in the queue.
      */
     public boolean verifyAndRepairWorkflow(String workflowId, boolean includeTasks) {
-        LOGGER.info("Triggered verifyAndRepairWorkflow for workflowId {} with includeTasks {} ", workflowId, includeTasks);
+        LOGGER.debug("Triggered verifyAndRepairWorkflow for workflowId {} with includeTasks {} ", workflowId, includeTasks);
         WorkflowModel workflow = executionDAO.getWorkflow(workflowId, includeTasks);
         AtomicBoolean repaired = new AtomicBoolean(false);
         repaired.set(verifyAndRepairDeciderQueue(workflow));
         if (includeTasks) {
             workflow.getTasks().forEach(task -> repaired.set(verifyAndRepairTask(task)));
         }
-        LOGGER.info("Triggered verifyAndRepairWorkflow for workflowId {} with repaired {} ", workflowId, repaired.get());
         return repaired.get();
     }
 
@@ -136,16 +135,13 @@ public class WorkflowRepairService {
      */
     @VisibleForTesting
     boolean verifyAndRepairTask(TaskModel task) {
-        LOGGER.info("Inside verifyAndRepairTask taskId {} for workflowId {}", task.getTaskId() , task.getWorkflowInstanceId());
         if (isTaskRepairable.test(task)) {
             // Ensure QueueDAO contains this taskId
-
-
             String taskQueueName = QueueUtils.getQueueName(task);
-            LOGGER.info("Inside verifyAndRepairTask for taskQueueName{} taskId {} for workflowId {}", taskQueueName, task.getTaskId() , task.getWorkflowInstanceId());
+            LOGGER.debug("Inside verifyAndRepairTask for taskQueueName{} taskId {} for workflowId {}", taskQueueName, task.getTaskId() , task.getWorkflowInstanceId());
             if (!queueDAO.containsMessage(taskQueueName, task.getTaskId())) {
                 queueDAO.push(taskQueueName, task.getTaskId(), task.getCallbackAfterSeconds());
-                LOGGER.info(
+                LOGGER.debug(
                         "Task {} in workflow {} re-queued for repairs",
                         task.getTaskId(),
                         task.getWorkflowInstanceId());
@@ -156,7 +152,7 @@ public class WorkflowRepairService {
                 && task.getStatus() == TaskModel.Status.IN_PROGRESS) {
             WorkflowModel subWorkflow = executionDAO.getWorkflow(task.getSubWorkflowId(), false);
             if (subWorkflow.getStatus().isTerminal()) {
-                LOGGER.info(
+                LOGGER.debug(
                         "Repairing sub workflow task {} for sub workflow {} in workflow {}",
                         task.getTaskId(),
                         task.getSubWorkflowId(),
@@ -170,12 +166,11 @@ public class WorkflowRepairService {
 
     private boolean verifyAndRepairWorkflow(String workflowId) {
         if (StringUtils.isNotEmpty(workflowId)) {
-            LOGGER.info("verifyAndRepairWorkflow {} called for workflowid {}", workflowId);
             String queueName = Utils.DECIDER_QUEUE;
             if (!queueDAO.containsMessage(queueName, workflowId)) {
                 queueDAO.push(
                         queueName, workflowId, properties.getWorkflowOffsetTimeout().getSeconds());
-                LOGGER.info("Workflow {} re-queued for repairs", workflowId);
+                LOGGER.debug("Workflow {} re-queued for repairs", workflowId);
                 Monitors.recordQueueMessageRepushFromRepairService(queueName);
                 return true;
             }

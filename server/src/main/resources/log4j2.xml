@@ -23,30 +23,9 @@
         </Console>
     </Appenders>
 
-    <appender name="file" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>server.log</file>
-        <encoder>
-            <pattern>%-4r [%t] %-5p %c %x - %m%n</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- daily rollover -->
-            <fileNamePattern>server.%d{yyyy-MM-dd}.log</fileNamePattern>
-            <!-- keep 7 days' worth of history -->
-            <maxHistory>7</maxHistory>
-        </rollingPolicy>
-    </appender>
-
-    <!--
-    Turn on slow query logging by setting this logger to DEBUG;
-    set level to TRACE to also log query parameters
-    -->
-    <logger name="com.datastax.driver.core.QueryLogger.SLOW" level="DEBUG" />
-    <logger name="com.datastax.driver.core.QueryLogger.NORMAL" level="DEBUG" />
-
     <Loggers>
         <Root level="INFO">
             <AppenderRef ref="CONSOLE" />
-            <AppenderRef ref="file" />
         </Root>
     </Loggers>
 </Configuration>

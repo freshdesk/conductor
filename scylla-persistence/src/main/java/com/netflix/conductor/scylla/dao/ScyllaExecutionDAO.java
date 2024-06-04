@@ -568,7 +568,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     workflow.setTasks(tasks);
                 } else {
 
-                    LOGGER.debug("Concurrent update detected, update failed for workflow: {} with version {}",
+                    LOGGER.info("Concurrent update detected, update failed for workflow: {} with version {} retrying..",
                             workflow.getWorkflowId(), currentVersion);
 
                     WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId(), false);
