@@ -558,12 +558,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
 
             if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
-                ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, currentVersion + 1,
+                ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, prevWorkflow.getVersion() + 1,
                         UUID.fromString(workflow.getWorkflowId()),
                         correlationId, currentVersion));
                 if (resultSet.wasApplied()) {
                     LOGGER.debug("Updated workflow - current status {} for workflowId {} with version {} ",
-                            workflow.getStatus(), workflow.getWorkflowId(), currentVersion + 1);
+                            workflow.getStatus(), workflow.getWorkflowId(), prevWorkflow.getVersion() + 1);
                     workflow.setTasks(tasks);
                 } else {
 
@@ -572,15 +572,16 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
                     WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId(), false);
 
-                    Integer retriedVersion = retriedWorkflow.getVersion() == 0 ? null : prevWorkflow.getVersion();
+                    Integer retriedVersion = retriedWorkflow.getVersion() == 0 ? null : retriedWorkflow.getVersion();
 
                     if (!retriedWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
-                        ResultSet retriedResultSet = session.execute(updateWorkflowStatement.bind(payload, retriedVersion + 1,
+                        ResultSet retriedResultSet = session.execute(updateWorkflowStatement.bind(payload,
+                                retriedWorkflow.getVersion() + 1,
                                 UUID.fromString(workflow.getWorkflowId()),
                                 correlationId, retriedVersion));
                         if (retriedResultSet.wasApplied()) {
                             LOGGER.debug("Updated workflow - current status {} for workflowId {} with retriedVersion {} ",
-                                    workflow.getStatus(), workflow.getWorkflowId(), retriedVersion + 1);
+                                    workflow.getStatus(), workflow.getWorkflowId(), retriedWorkflow.getVersion() + 1);
                             workflow.setTasks(tasks);
                         } else {
                             LOGGER.info("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
