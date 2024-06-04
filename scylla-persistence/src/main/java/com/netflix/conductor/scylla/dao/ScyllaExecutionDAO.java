@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.netflix.conductor.annotations.Trace;
+import com.netflix.conductor.redislock.lock.RedisLock;
 import com.netflix.conductor.scylla.config.ScyllaProperties;
 import com.netflix.conductor.scylla.util.Statements;
 import com.netflix.conductor.common.metadata.events.EventExecution;
@@ -32,15 +33,19 @@ import com.netflix.conductor.model.TaskModel;
 import com.netflix.conductor.model.WorkflowModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.netflix.conductor.scylla.util.Constants.*;
 
 @Trace
 public class ScyllaExecutionDAO extends ScyllaBaseDAO
-        implements ExecutionDAO, ConcurrentExecutionLimitDAO {
+        implements ExecutionDAO, ConcurrentExecutionLimitDAO, ApplicationContextAware {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaExecutionDAO.class);
     private static final String CLASS_NAME = ScyllaExecutionDAO.class.getSimpleName();
@@ -83,6 +88,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     protected final PreparedStatement deleteEventExecutionStatement;
 
     protected final int eventExecutionsTTL;
+    private RedisLock redisLock;
 
     public ScyllaExecutionDAO(
             Session session,
@@ -346,15 +352,25 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
-            LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} ",
-                    task.getTaskId(),task.getStatus(), task.getWorkflowInstanceId(),task.getReferenceTaskName());
-            session.execute(
-                    insertTaskStatement.bind(
-                            UUID.fromString(task.getWorkflowInstanceId()),
-                            correlationId,
-                            task.getTaskId(),
-                            taskPayload));
-            verifyTaskStatus(task);
+            if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
+                TaskModel prevTask = getTask(task.getTaskId());
+                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
+                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
+                        prevTask.getStatus());
+
+                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                    session.execute(
+                            insertTaskStatement.bind(
+                                    UUID.fromString(task.getWorkflowInstanceId()),
+                                    correlationId,
+                                    task.getTaskId(),
+                                    taskPayload));
+                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
+                            task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                }
+                verifyTaskStatus(task);
+            }
+            redisLock.releaseLock(task.getTaskId());
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateTask");
             String errorMsg =
@@ -556,7 +572,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
-
 
             if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
                 ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, currentVersion + 1,
@@ -1105,5 +1120,10 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.redisLock = (RedisLock) applicationContext.getBean("provideRedisLock");
     }
 }

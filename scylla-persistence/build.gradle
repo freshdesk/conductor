@@ -17,6 +17,7 @@ dependencies {
 
     implementation project(':conductor-common')
     implementation project(':conductor-core')
+    implementation project(':conductor-redis-lock')
     implementation "com.scylladb:scylla-driver-core:${revScylla}"
     implementation "org.apache.commons:commons-lang3"
 
