@@ -561,58 +561,60 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             workflow.setTasks(new LinkedList<>());
 
             WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
-            LOGGER.debug("Update workflow - getPrevious workflow status {} for workflowId {} and version {} ", prevWorkflow.getStatus(),
+            LOGGER.debug("Update workflow - getPrevious workflow status {} - current Status {} for workflowId {} and prevVersion {} ",
+                    prevWorkflow.getStatus(),
+                    workflow.getStatus(),
                     prevWorkflow.getWorkflowId(), prevWorkflow.getVersion());
-            LOGGER.debug("Update workflow - current status {} for workflowId {} ", workflow.getStatus(), workflow.getWorkflowId());
-
-            // Check version and update the workflow
-            int currentVersion = prevWorkflow.getVersion();
 
             String payload = toJson(workflow);
-            recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
-            recordCassandraDaoPayloadSize(
-                    "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
 
             if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
-                ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, currentVersion + 1,
-                        UUID.fromString(workflow.getWorkflowId()),
-                        correlationId, currentVersion));
-                if (resultSet.wasApplied()) {
-                    LOGGER.debug("Updated workflow - current status {} for workflowId {} with version {} ",
-                            workflow.getStatus(), workflow.getWorkflowId(), currentVersion + 1);
+                if (attemptUpdateWorkflow(workflow, prevWorkflow, payload, correlationId, Boolean.FALSE)) {
                     workflow.setTasks(tasks);
                 } else {
-
-                    LOGGER.debug("Concurrent update detected, update failed for workflow: {} with version {}",
-                            workflow.getWorkflowId(), currentVersion);
-
-                    WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId(), false);
-                    int retriedVersion = retriedWorkflow.getVersion();
-
-                    if (!retriedWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
-                        ResultSet retriedResultSet = session.execute(updateWorkflowStatement.bind(payload, retriedVersion + 1,
-                                UUID.fromString(workflow.getWorkflowId()),
-                                correlationId, retriedVersion));
-                        if (retriedResultSet.wasApplied()) {
-                            LOGGER.debug("Updated workflow - current status {} for workflowId {} with retriedVersion {} ",
-                                    workflow.getStatus(), workflow.getWorkflowId(), retriedVersion + 1);
-                            workflow.setTasks(tasks);
-                        } else {
-                            LOGGER.debug("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
-                                    workflow.getWorkflowId(), retriedVersion);
-                        }
-                    }
+                    handleConcurrentUpdate(workflow, tasks, payload, correlationId);
                 }
             }
             return workflow.getWorkflowId();
         } catch (DriverException e) {
-            Monitors.error(CLASS_NAME, "updateWorkflow");
-            String errorMsg =
-                    String.format("Failed to update workflow: %s", workflow.getWorkflowId());
-            LOGGER.error(errorMsg, e);
-            throw new TransientException(errorMsg);
+            handleError(workflow, e, "updateWorkflow");
+            throw new TransientException("Failed to update workflow: " + workflow.getWorkflowId(), e);
         }
     }
+
+    private boolean attemptUpdateWorkflow(WorkflowModel workflow, WorkflowModel prevWorkflow,  String payload, Integer correlationId, Boolean isRetry) {
+        Integer currentVersion = prevWorkflow.getVersion() == 0 ? null : prevWorkflow.getVersion();
+        ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, prevWorkflow.getVersion() + 1,
+                UUID.fromString(workflow.getWorkflowId()), correlationId, currentVersion));
+        if (resultSet.wasApplied()) {
+            LOGGER.debug("Updated workflow with isRetry {} - current status {} for workflowId {} with version {}",
+                    isRetry, workflow.getStatus(), workflow.getWorkflowId(), prevWorkflow.getVersion() + 1);
+            return true;
+        }
+        return false;
+    }
+
+
+    private void handleConcurrentUpdate(WorkflowModel workflow, List<TaskModel> tasks, String payload, Integer correlationId) {
+        LOGGER.info("Concurrent update detected, update failed for workflow: {} retrying..", workflow.getWorkflowId());
+        WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId());
+
+        if (!retriedWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+            if (attemptUpdateWorkflow(workflow, retriedWorkflow, payload, correlationId, true)) {
+                workflow.setTasks(tasks);
+            } else {
+                LOGGER.info("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
+                        workflow.getWorkflowId(), retriedWorkflow.getVersion());
+            }
+        }
+    }
+
+    private void handleError(WorkflowModel workflow, DriverException e, String methodName) {
+        Monitors.error(CLASS_NAME, methodName);
+        String errorMsg = String.format("Failed to update workflow: %s", workflow.getWorkflowId());
+        LOGGER.error(errorMsg, e);
+    }
+
 
     @Override
     public boolean removeWorkflow(String workflowId) {
