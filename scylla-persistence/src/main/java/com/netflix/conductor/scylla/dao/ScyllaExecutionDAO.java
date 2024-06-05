@@ -44,6 +44,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaExecutionDAO.class);
     private static final String CLASS_NAME = ScyllaExecutionDAO.class.getSimpleName();
+    private static final Object lock = new Object();
 
     protected final PreparedStatement insertWorkflowStatement;
     protected final PreparedStatement insertTaskStatement;
@@ -240,6 +241,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
             // update the task_lookup table
             // update the workflow_lookup table
+            LOGGER.debug("Create tasks list {} for workflowId {} ",tasks.stream()
+                            .map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),workflowId);
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
@@ -343,6 +346,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
+            LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} ",
+                    task.getTaskId(),task.getStatus(), task.getWorkflowInstanceId(),task.getReferenceTaskName());
             session.execute(
                     insertTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
@@ -519,7 +524,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     "createWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
             session.execute(
                     insertWorkflowStatement.bind(
-                            UUID.fromString(workflow.getWorkflowId()), correlationId, "", payload, 0, 1));
+                            UUID.fromString(workflow.getWorkflowId()), correlationId, "", payload, 0, 1,1));
 
             workflow.setTasks(tasks);
             return workflow.getWorkflowId();
@@ -538,14 +543,53 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             List<TaskModel> tasks = workflow.getTasks();
             Integer correlationId = Objects.isNull(workflow.getCorrelationId()) ? 0 : Integer.parseInt(workflow.getCorrelationId());
             workflow.setTasks(new LinkedList<>());
+
+            WorkflowModel prevWorkflow = getWorkflow(workflow.getWorkflowId(), false);
+            LOGGER.debug("Update workflow - getPrevious workflow status {} for workflowId {} and version {} ", prevWorkflow.getStatus(),
+                    prevWorkflow.getWorkflowId(), prevWorkflow.getVersion());
+            LOGGER.debug("Update workflow - current status {} for workflowId {} ", workflow.getStatus(), workflow.getWorkflowId());
+
+            // Check version and update the workflow
+            Integer currentVersion = prevWorkflow.getVersion() == 0 ? null : prevWorkflow.getVersion();
+
             String payload = toJson(workflow);
             recordCassandraDaoRequests("updateWorkflow", "n/a", workflow.getWorkflowName());
             recordCassandraDaoPayloadSize(
                     "updateWorkflow", payload.length(), "n/a", workflow.getWorkflowName());
-            session.execute(
-                    updateWorkflowStatement.bind(
-                            payload, UUID.fromString(workflow.getWorkflowId()),correlationId));
-            workflow.setTasks(tasks);
+
+            if (!prevWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+                ResultSet resultSet = session.execute(updateWorkflowStatement.bind(payload, prevWorkflow.getVersion() + 1,
+                        UUID.fromString(workflow.getWorkflowId()),
+                        correlationId, currentVersion));
+                if (resultSet.wasApplied()) {
+                    LOGGER.debug("Updated workflow - current status {} for workflowId {} with version {} ",
+                            workflow.getStatus(), workflow.getWorkflowId(), prevWorkflow.getVersion() + 1);
+                    workflow.setTasks(tasks);
+                } else {
+
+                    LOGGER.info("Concurrent update detected, update failed for workflow: {} with version {} retrying..",
+                            workflow.getWorkflowId(), currentVersion);
+
+                    WorkflowModel retriedWorkflow = getWorkflow(workflow.getWorkflowId(), false);
+
+                    Integer retriedVersion = retriedWorkflow.getVersion() == 0 ? null : retriedWorkflow.getVersion();
+
+                    if (!retriedWorkflow.getStatus().equals(WorkflowModel.Status.COMPLETED)) {
+                        ResultSet retriedResultSet = session.execute(updateWorkflowStatement.bind(payload,
+                                retriedWorkflow.getVersion() + 1,
+                                UUID.fromString(workflow.getWorkflowId()),
+                                correlationId, retriedVersion));
+                        if (retriedResultSet.wasApplied()) {
+                            LOGGER.debug("Updated workflow - current status {} for workflowId {} with retriedVersion {} ",
+                                    workflow.getStatus(), workflow.getWorkflowId(), retriedWorkflow.getVersion() + 1);
+                            workflow.setTasks(tasks);
+                        } else {
+                            LOGGER.info("Concurrent update retriedVersion detected, update failed for workflow: {} with version {}",
+                                    workflow.getWorkflowId(), retriedVersion);
+                        }
+                    }
+                }
+            }
             return workflow.getWorkflowId();
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateWorkflow");
@@ -630,6 +674,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     String entityKey = row.getString(ENTITY_KEY);
                     if (ENTITY_TYPE_WORKFLOW.equals(entityKey)) {
                         workflow = readValue(row.getString(PAYLOAD_KEY), WorkflowModel.class);
+                        // Added version for version locking
+                        workflow.setVersion(row.getInt(VERSION));
                     } else if (ENTITY_TYPE_TASK.equals(entityKey)) {
                         TaskModel task = readValue(row.getString(PAYLOAD_KEY), TaskModel.class);
                         tasks.add(task);
@@ -656,6 +702,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                                                     readValue(
                                                             row.getString(PAYLOAD_KEY),
                                                             WorkflowModel.class);
+                                            // Added version for version locking
+                                            wf.setVersion(row.getInt(VERSION));
                                             recordCassandraDaoRequests(
                                                     "getWorkflow", "n/a", wf.getWorkflowName());
                                             return wf;
