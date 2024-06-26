@@ -196,7 +196,7 @@ public class ScyllaMetadataDAO extends ScyllaBaseDAO implements MetadataDAO {
     public void updateWorkflowDef(WorkflowDef workflowDef) {
         try {
             String workflowDefinition = toJson(workflowDef);
-            workflowDefinition.replace("'", "/'");
+            workflowDefinition = workflowDefinition.replace("'", "/'");
 
             LOGGER.info("workflowDefinition >> ", workflowDefinition);
 
