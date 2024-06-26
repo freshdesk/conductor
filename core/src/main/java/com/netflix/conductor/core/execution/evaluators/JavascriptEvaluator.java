@@ -29,8 +29,9 @@ public class JavascriptEvaluator implements Evaluator {
 
     @Override
     public Object evaluate(String expression, Object input) {
-        LOGGER.debug("Javascript evaluator -- expression: {}", expression);
+        LOGGER.info("Javascript evaluator -- expression: {}", expression);
         try {
+            expression = expression.replace("###", "\\'");
             // Evaluate the expression by using the Javascript evaluation engine.
             Object result = ScriptEvaluator.eval(expression, input);
             LOGGER.debug("Javascript evaluator -- result: {}", result);
