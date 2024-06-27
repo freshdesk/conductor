@@ -32,7 +32,7 @@ public class JavascriptEvaluator implements Evaluator {
     public Object evaluate(String expression, Object input) {
         try {
             expression = expression.replace(UNIQUE_DELIMITER, "\\'");
-            LOGGER.info("Javascript evaluator -- expression: {}", expression);
+            LOGGER.debug("Javascript evaluator -- expression: {}", expression);
             // Evaluate the expression by using the Javascript evaluation engine.
             Object result = ScriptEvaluator.eval(expression, input);
             LOGGER.debug("Javascript evaluator -- result: {}", result);
