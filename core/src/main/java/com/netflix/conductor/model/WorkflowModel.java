@@ -53,6 +53,9 @@ public class WorkflowModel {
         }
     }
 
+    // New version field to avoid phantom read
+    private int version;
+
     private Status status = Status.RUNNING;
 
     private long endTime;
@@ -134,6 +137,14 @@ public class WorkflowModel {
             setPreviousStatus(this.status);
         }
         this.status = status;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public long getEndTime() {
