@@ -25,12 +25,14 @@ import com.netflix.conductor.core.exception.TerminateWorkflowException;
 public class JavascriptEvaluator implements Evaluator {
 
     public static final String NAME = "javascript";
+    public static final String UNIQUE_DELIMITER = "###DEL###"; // Highly unlikely sequence
     private static final Logger LOGGER = LoggerFactory.getLogger(JavascriptEvaluator.class);
 
     @Override
     public Object evaluate(String expression, Object input) {
-        LOGGER.debug("Javascript evaluator -- expression: {}", expression);
         try {
+            expression = expression.replace(UNIQUE_DELIMITER, "\\'");
+            LOGGER.debug("Javascript evaluator -- expression: {}", expression);
             // Evaluate the expression by using the Javascript evaluation engine.
             Object result = ScriptEvaluator.eval(expression, input);
             LOGGER.debug("Javascript evaluator -- result: {}", result);
