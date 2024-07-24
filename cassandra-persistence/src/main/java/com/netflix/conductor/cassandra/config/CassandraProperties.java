@@ -48,7 +48,7 @@ public class CassandraProperties {
     private int shardSize = 100;
 
     /** The replication strategy with which to configure the keyspace */
-    private String replicationStrategy = "NetworkTopologyStrategy";
+    private String replicationStrategy = "SimpleStrategy";
 
     /** The key to be used while configuring the replication factor */
     private String replicationFactorKey = "replication_factor";
