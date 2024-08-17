@@ -29,7 +29,7 @@ import com.netflix.conductor.redislock.lock.RedisLock;
 
 @Configuration
 @EnableConfigurationProperties(RedisLockProperties.class)
-@ConditionalOnProperty(name = "conductor.workflow-execution-lock.type", havingValue = "redis")
+@ConditionalOnProperty(name = "conductor.workflow-scylla-execution-lock.enabled", havingValue = "true")
 public class RedisLockConfiguration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RedisLockConfiguration.class);
@@ -100,7 +100,7 @@ public class RedisLockConfiguration {
     }
 
     @Bean
-    public Lock provideLock(Redisson redisson, RedisLockProperties properties) {
+    public Lock provideRedisLock(Redisson redisson, RedisLockProperties properties) {
         return new RedisLock(redisson, properties);
     }
 }
