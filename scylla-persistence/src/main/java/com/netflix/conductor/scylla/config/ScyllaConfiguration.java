@@ -15,6 +15,7 @@ package com.netflix.conductor.scylla.config;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.ProtocolVersion;
+import com.datastax.driver.core.QueryLogger;
 import com.datastax.driver.core.Session;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.scylla.config.cache.CacheableEventHandlerDAO;
@@ -75,6 +76,14 @@ public class ScyllaConfiguration {
     public Session session(Cluster cluster) {
         LOGGER.info("Initializing scylla session");
         return cluster.connect();
+    }
+
+    @Bean
+    public QueryLogger queryLogger(Cluster cluster) {
+        QueryLogger queryLogger = QueryLogger.builder()
+                .build();
+        cluster.register(queryLogger);
+        return queryLogger;
     }
 
     @Bean
