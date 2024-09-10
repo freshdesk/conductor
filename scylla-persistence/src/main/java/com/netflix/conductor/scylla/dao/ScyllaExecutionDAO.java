@@ -346,7 +346,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void updateTask(TaskModel task) {
         try {
-            if (!redisLock.isProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId())) {
+            //if (!redisLock.isProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId())) {
                 long start = System.currentTimeMillis();
                 Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
                 String taskPayload = toJson(task);
@@ -358,8 +358,11 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                             task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(), prevTask.getStatus());
 
                     if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                        long tstart = System.currentTimeMillis();
                         session.execute(insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(),
                                 taskPayload));
+                        LOGGER.info("Conductor insertTaskStatement for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                                task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
                         LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
                                 task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                     }
@@ -367,9 +370,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
                             task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - start);
                 }
-                redisLock.markProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId());
+                //redisLock.markProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId());
                 redisLock.releaseLock(task.getTaskId());
-            }
+            //}
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateTask");
             String errorMsg =
@@ -925,11 +928,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         try {
             recordCassandraDaoRequests(
                     "addTaskToLimit", task.getTaskType(), task.getWorkflowType());
+            long tstart = System.currentTimeMillis();
             session.execute(
                     updateTaskDefLimitStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
                             task.getTaskDefName(),
                             UUID.fromString(task.getTaskId())));
+            LOGGER.info("Conductor updateTaskDefLimitStatement for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                    task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "addTaskToLimit");
             String errorMsg =
