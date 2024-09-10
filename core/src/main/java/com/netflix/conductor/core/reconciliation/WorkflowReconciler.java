@@ -59,8 +59,8 @@ public class WorkflowReconciler extends LifecycleAwareComponent {
     }
 
     @Scheduled(
-            fixedDelayString = "${conductor.sweep-frequency.millis:500}",
-            initialDelayString = "${conductor.sweep-frequency.millis:500}")
+            fixedDelayString = "5000",
+            initialDelayString = "5000")
     public void pollAndSweep() {
         try {
             if (!isRunning()) {
