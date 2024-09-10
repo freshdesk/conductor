@@ -347,6 +347,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void updateTask(TaskModel task) {
         try {
+            long start = System.currentTimeMillis();
             Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
             String taskPayload = toJson(task);
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
@@ -369,6 +370,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                             task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                 }
                 verifyTaskStatus(task);
+            LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                    task.getWorkflowInstanceId(),
+                    task.getTaskId(), System.currentTimeMillis() - start);
             //}
             //redisLock.releaseLock(task.getTaskId());
         } catch (DriverException e) {
