@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.netflix.conductor.annotations.Trace;
+import com.netflix.conductor.redis.dao.RedisExecutionDAO;
 import com.netflix.conductor.redislock.lock.RedisLock;
 import com.netflix.conductor.scylla.config.ScyllaProperties;
 import com.netflix.conductor.scylla.util.Statements;
@@ -34,6 +35,7 @@ import com.netflix.conductor.model.WorkflowModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
@@ -86,9 +88,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     protected final PreparedStatement deleteTaskLookupStatement;
     protected final PreparedStatement deleteTaskDefLimitStatement;
     protected final PreparedStatement deleteEventExecutionStatement;
-
     protected final int eventExecutionsTTL;
     private RedisLock redisLock;
+    private RedisExecutionDAO redisExecutionDAO;
 
     public ScyllaExecutionDAO(
             Session session,
@@ -347,34 +349,37 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void updateTask(TaskModel task) {
         try {
-            long start = System.currentTimeMillis();
-            Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
-            String taskPayload = toJson(task);
-            recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
-            recordCassandraDaoPayloadSize(
-                    "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
-            //if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
-                TaskModel prevTask = getTask(task.getTaskId());
-                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
-                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
-                        prevTask.getStatus());
+            if (!redisExecutionDAO.isTaskProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId())) {
+                long start = System.currentTimeMillis();
+                Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
+                String taskPayload = toJson(task);
+                recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
+                recordCassandraDaoPayloadSize(
+                        "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
+                if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
+                    TaskModel prevTask = getTask(task.getTaskId());
+                    LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
+                            task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
+                            prevTask.getStatus());
 
-                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
-                    session.execute(
-                            insertTaskStatement.bind(
-                                    UUID.fromString(task.getWorkflowInstanceId()),
-                                    correlationId,
-                                    task.getTaskId(),
-                                    taskPayload));
-                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
-                            task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                    if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                        session.execute(
+                                insertTaskStatement.bind(
+                                        UUID.fromString(task.getWorkflowInstanceId()),
+                                        correlationId,
+                                        task.getTaskId(),
+                                        taskPayload));
+                        LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
+                                task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                    }
+                    verifyTaskStatus(task);
+                    LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                            task.getWorkflowInstanceId(),
+                            task.getTaskId(), System.currentTimeMillis() - start);
                 }
-                verifyTaskStatus(task);
-            LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
-                    task.getWorkflowInstanceId(),
-                    task.getTaskId(), System.currentTimeMillis() - start);
-            //}
-            //redisLock.releaseLock(task.getTaskId());
+                redisExecutionDAO.markTaskAsProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId());
+                redisLock.releaseLock(task.getTaskId());
+            }
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateTask");
             String errorMsg =
@@ -1131,5 +1136,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.redisLock = (RedisLock) applicationContext.getBean("provideRedisLock");
+        this.redisExecutionDAO = applicationContext.getBean(RedisExecutionDAO.class);
     }
 }
