@@ -144,8 +144,8 @@ public abstract class ScyllaBaseDAO {
                 .getQueryString();
     }
 
-    private String getCreateTaskLookupTableStatement() {
-        return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_LOOKUP)
+    private String getCreateTaskPodLookupTableStatement() {
+        return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_POD_LOOKUP)
                 .ifNotExists()
                 .addPartitionKey(TASK_ID_KEY, DataType.uuid())
                 .addColumn(WORKFLOW_ID_KEY, DataType.uuid())
@@ -153,7 +153,7 @@ public abstract class ScyllaBaseDAO {
                 .getQueryString();
     }
 
-    private String getCreateTaskPodLookupTableStatement() {
+    private String getCreateTaskLookupTableStatement() {
         return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_LOOKUP)
                 .ifNotExists()
                 .addPartitionKey(TASK_ID_KEY, DataType.uuid())

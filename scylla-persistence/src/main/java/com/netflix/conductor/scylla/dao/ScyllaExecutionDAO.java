@@ -377,7 +377,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
                             task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - start);
                 }
-                redisExecutionDAO.markTaskAsProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId());
                 session.execute(updateTaskLookupPodStatement.bind(UUID.fromString(task.getTaskId()), UUID.fromString(task.getWorkflowInstanceId())));
                 redisLock.releaseLock(task.getTaskId());
             }
