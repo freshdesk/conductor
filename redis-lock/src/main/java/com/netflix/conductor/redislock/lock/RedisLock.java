@@ -12,10 +12,12 @@
  */
 package com.netflix.conductor.redislock.lock;
 
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
+import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
@@ -81,6 +83,16 @@ public class RedisLock implements Lock {
         } catch (IllegalMonitorStateException e) {
             // Releasing a lock twice using Redisson can cause this exception, which can be ignored.
         }
+    }
+
+    public void markProcessed(String uniqueKey) {
+        RBucket<String> bucket = redisson.getBucket(uniqueKey);
+        bucket.set("processed", 30, TimeUnit.MINUTES);
+    }
+
+    public boolean isProcessed(String uniqueKey) {
+        String value = (String) redisson.getBucket(uniqueKey).get();
+        return Objects.nonNull(value) && value.equals("processed");
     }
 
     @Override

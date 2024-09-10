@@ -354,9 +354,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void updateTask(TaskModel task) {
         try {
-            ResultSet resultSet = session.execute(
-                    selectTaskLookupPodStatement.bind(UUID.fromString(task.getTaskId()), UUID.fromString(task.getWorkflowInstanceId())));
-            if (resultSet.all().isEmpty() || resultSet.all().size() < 1) {
+            if (!redisLock.isProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId())) {
                 long start = System.currentTimeMillis();
                 Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
                 String taskPayload = toJson(task);
@@ -377,7 +375,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
                             task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - start);
                 }
-                session.execute(updateTaskLookupPodStatement.bind(UUID.fromString(task.getTaskId()), UUID.fromString(task.getWorkflowInstanceId())));
+                redisLock.markProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId()));
                 redisLock.releaseLock(task.getTaskId());
             }
         } catch (DriverException e) {
