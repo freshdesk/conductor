@@ -94,16 +94,6 @@ public class RedisExecutionDAO extends BaseDynoDAO
         return dates;
     }
 
-    public void markTaskAsProcessed(String uniqueKey) {
-        jedisProxy.set(uniqueKey, "processed");
-        jedisProxy.expire(uniqueKey, 3600);
-    }
-
-    public boolean isTaskProcessed(String uniqueKey) {
-        String value = jedisProxy.get(uniqueKey);
-        return Objects.nonNull(value) && value.equals("processed") ? true : false;
-    }
-
     @Override
     public List<TaskModel> getPendingTasksByWorkflow(String taskName, String workflowId) {
         List<TaskModel> tasks = new LinkedList<>();

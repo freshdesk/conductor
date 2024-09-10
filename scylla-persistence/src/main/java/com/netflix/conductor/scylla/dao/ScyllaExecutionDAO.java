@@ -85,8 +85,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     protected final PreparedStatement deleteWorkflowStatement;
     protected final PreparedStatement deleteTaskStatement;
     protected final PreparedStatement deleteTaskLookupStatement;
-    protected final PreparedStatement updateTaskLookupPodStatement;
-    protected final PreparedStatement selectTaskLookupPodStatement;
     protected final PreparedStatement deleteTaskDefLimitStatement;
     protected final PreparedStatement deleteEventExecutionStatement;
     protected final int eventExecutionsTTL;
@@ -102,12 +100,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
         this.insertWorkflowStatement =
                 session.prepare(statements.getInsertWorkflowStatement())
-                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
-        this.selectTaskLookupPodStatement =
-                session.prepare(statements.getSelectTaskLookupStatement())
-                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
-        this.updateTaskLookupPodStatement =
-                session.prepare(statements.getInsertTaskLookupStatement())
                         .setConsistencyLevel(properties.getWriteConsistencyLevel());
         this.insertTaskStatement =
                 session.prepare(statements.getInsertTaskStatement())

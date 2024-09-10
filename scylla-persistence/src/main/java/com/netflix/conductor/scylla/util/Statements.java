@@ -334,23 +334,6 @@ public class Statements {
                 .getQueryString();
     }
 
-    public String getInsertTaskLookupStatement() {
-        return QueryBuilder.insertInto(keyspace, TABLE_TASK_POD_LOOKUP)
-                .value(TASK_ID_KEY, bindMarker())
-                .value(WORKFLOW_ID_KEY, bindMarker())
-                .value(IS_PROCESSED,"processed")
-                .getQueryString();
-    }
-
-    public String getSelectTaskLookupStatement() {
-        return QueryBuilder.select()
-                .countAll()
-                .from(keyspace, TABLE_TASK_POD_LOOKUP)
-                .where(eq(TASK_ID_KEY, bindMarker()))
-                .and(eq(WORKFLOW_ID_KEY, bindMarker()))
-                .getQueryString();
-    }
-
     /**
      * @return cql query statement to retrieve all the tasks count from task_in_progress table
      * per taskDefName and task_id
