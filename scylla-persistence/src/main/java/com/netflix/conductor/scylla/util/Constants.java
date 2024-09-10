@@ -17,7 +17,7 @@ public interface Constants {
     String DAO_NAME = "scylla";
 
     String TABLE_WORKFLOWS = "workflows";
-    String TABLE_TASK_LOOKUP = "task_lookup";
+    String TABLE_TASK_LOOKUP = "task_pod_lookup";
     String TABLE_WORKFLOW_LOOKUP = "workflow_lookup";
     String TABLE_TASK_DEF_LIMIT = "task_def_limit";
     String TABLE_WORKFLOW_DEFS = "workflow_definitions";
@@ -29,6 +29,7 @@ public interface Constants {
     String TABLE_TASK_IN_PROGRESS = "task_in_progress";
 
     String WORKFLOW_ID_KEY = "workflow_id";
+    String IS_PROCESSED = "processed";
     String SHARD_ID_KEY = "shard_id";
     String TASK_ID_KEY = "task_id";
     String ENTITY_KEY = "entity";

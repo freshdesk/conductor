@@ -86,12 +86,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     protected final PreparedStatement deleteWorkflowStatement;
     protected final PreparedStatement deleteTaskStatement;
     protected final PreparedStatement deleteTaskLookupStatement;
+    protected final PreparedStatement updateTaskLookupPodStatement;
+    protected final PreparedStatement selectTaskLookupPodStatement;
     protected final PreparedStatement deleteTaskDefLimitStatement;
     protected final PreparedStatement deleteEventExecutionStatement;
     protected final int eventExecutionsTTL;
     private RedisLock redisLock;
-    private RedisExecutionDAO redisExecutionDAO;
-
     public ScyllaExecutionDAO(
             Session session,
             ObjectMapper objectMapper,
@@ -103,6 +103,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
         this.insertWorkflowStatement =
                 session.prepare(statements.getInsertWorkflowStatement())
+                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
+        this.selectTaskLookupPodStatement =
+                session.prepare(statements.getSelectTaskLookupStatement())
+                        .setConsistencyLevel(properties.getWriteConsistencyLevel());
+        this.updateTaskLookupPodStatement =
+                session.prepare(statements.getInsertTaskLookupStatement())
                         .setConsistencyLevel(properties.getWriteConsistencyLevel());
         this.insertTaskStatement =
                 session.prepare(statements.getInsertTaskStatement())
@@ -349,35 +355,31 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void updateTask(TaskModel task) {
         try {
-            if (!redisExecutionDAO.isTaskProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId())) {
+            ResultSet resultSet = session.execute(
+                    selectTaskLookupPodStatement.bind(UUID.fromString(task.getTaskId()), UUID.fromString(task.getWorkflowInstanceId())));
+            if (resultSet.all().isEmpty() || resultSet.all().size() < 1) {
                 long start = System.currentTimeMillis();
                 Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
                 String taskPayload = toJson(task);
                 recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
-                recordCassandraDaoPayloadSize(
-                        "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
+                recordCassandraDaoPayloadSize("updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
                 if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
                     TaskModel prevTask = getTask(task.getTaskId());
                     LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
-                            task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
-                            prevTask.getStatus());
+                            task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(), prevTask.getStatus());
 
                     if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
-                        session.execute(
-                                insertTaskStatement.bind(
-                                        UUID.fromString(task.getWorkflowInstanceId()),
-                                        correlationId,
-                                        task.getTaskId(),
-                                        taskPayload));
-                        LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
-                                task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                        session.execute(insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(),
+                                taskPayload));
+                        LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
+                                task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                     }
                     verifyTaskStatus(task);
                     LOGGER.info("Conductor Final updateTask time for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
-                            task.getWorkflowInstanceId(),
-                            task.getTaskId(), System.currentTimeMillis() - start);
+                            task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - start);
                 }
                 redisExecutionDAO.markTaskAsProcessed(task.getTaskId() + "_" + task.getWorkflowInstanceId());
+                session.execute(updateTaskLookupPodStatement.bind(UUID.fromString(task.getTaskId()), UUID.fromString(task.getWorkflowInstanceId())));
                 redisLock.releaseLock(task.getTaskId());
             }
         } catch (DriverException e) {
@@ -1136,6 +1138,5 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.redisLock = (RedisLock) applicationContext.getBean("provideRedisLock");
-        this.redisExecutionDAO = applicationContext.getBean(RedisExecutionDAO.class);
     }
 }

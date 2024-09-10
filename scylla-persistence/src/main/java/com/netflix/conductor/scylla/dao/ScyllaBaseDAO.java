@@ -95,6 +95,7 @@ public abstract class ScyllaBaseDAO {
                 session.execute(getCreateKeyspaceStatement());
                 session.execute(getCreateWorkflowsTableStatement());
                 session.execute(getCreateTaskLookupTableStatement());
+                session.execute(getCreateTaskPodLookupTableStatement());
                 session.execute(getCreateTaskDefLimitTableStatement());
                 session.execute(getCreateWorkflowDefsTableStatement());
                 session.execute(getCreateWorkflowDefsIndexTableStatement());
@@ -144,6 +145,15 @@ public abstract class ScyllaBaseDAO {
     }
 
     private String getCreateTaskLookupTableStatement() {
+        return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_LOOKUP)
+                .ifNotExists()
+                .addPartitionKey(TASK_ID_KEY, DataType.uuid())
+                .addColumn(WORKFLOW_ID_KEY, DataType.uuid())
+                .addColumn(IS_PROCESSED, DataType.text())
+                .getQueryString();
+    }
+
+    private String getCreateTaskPodLookupTableStatement() {
         return SchemaBuilder.createTable(properties.getKeyspace(), TABLE_TASK_LOOKUP)
                 .ifNotExists()
                 .addPartitionKey(TASK_ID_KEY, DataType.uuid())
