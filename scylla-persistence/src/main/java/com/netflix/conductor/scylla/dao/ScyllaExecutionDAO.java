@@ -352,7 +352,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
-            if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
+            //if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
                 TaskModel prevTask = getTask(task.getTaskId());
                 LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
                         task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
@@ -369,8 +369,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                             task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                 }
                 verifyTaskStatus(task);
-            }
-            redisLock.releaseLock(task.getTaskId());
+            //}
+            //redisLock.releaseLock(task.getTaskId());
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateTask");
             String errorMsg =
