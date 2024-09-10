@@ -359,12 +359,16 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         prevTask.getStatus());
 
                 if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                    long tstart = System.currentTimeMillis();
                     session.execute(
                             insertTaskStatement.bind(
                                     UUID.fromString(task.getWorkflowInstanceId()),
                                     correlationId,
                                     task.getTaskId(),
                                     taskPayload));
+                    LOGGER.info("Conductor insertTaskStatement for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                            task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
+
                     LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
                             task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                 }
@@ -926,11 +930,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         try {
             recordCassandraDaoRequests(
                     "addTaskToLimit", task.getTaskType(), task.getWorkflowType());
+            long tstart = System.currentTimeMillis();
             session.execute(
                     updateTaskDefLimitStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
                             task.getTaskDefName(),
                             UUID.fromString(task.getTaskId())));
+            LOGGER.info("Conductor updateTaskDefLimitStatement for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                    task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "addTaskToLimit");
             String errorMsg =
