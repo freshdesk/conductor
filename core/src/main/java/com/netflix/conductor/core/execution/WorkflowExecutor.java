@@ -877,7 +877,8 @@ public class WorkflowExecutor {
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
             decide(workflowId);
         }
-        LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", taskResult.getTaskId(),
+        LOGGER.info("[Conductor] [WorkflowExecutor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
+                taskResult.getTaskId(),
                 taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
     }
 

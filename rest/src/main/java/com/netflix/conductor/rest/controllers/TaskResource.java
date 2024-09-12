@@ -86,8 +86,11 @@ public class TaskResource {
         LOGGER.debug("Received updateTask for task: {},for workflowInstanceId {} and status {} ",
                 taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus());
         String result = taskService.updateTask(taskResult);
-        LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", taskResult.getTaskId(),
-                taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
+        LOGGER.info(
+                "[Conductor] [TaskResource] updateTask Time taken for task: {},for workflowInstanceId {} and status {} " +
+                        "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start));
         return result;
     }
 

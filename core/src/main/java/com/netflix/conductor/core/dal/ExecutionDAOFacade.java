@@ -525,8 +525,8 @@ public class ExecutionDAOFacade {
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
-        LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", taskModel.getTaskId(),
-                taskModel.getWorkflowInstanceId(), taskModel.getStatus(), (System.currentTimeMillis() - start));
+        LOGGER.info("[Conductor] [ExecutionDAOFacade] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
+                taskModel.getTaskId(), taskModel.getWorkflowInstanceId(), taskModel.getStatus(), (System.currentTimeMillis() - start));
     }
 
     public void updateTasks(List<TaskModel> tasks) {

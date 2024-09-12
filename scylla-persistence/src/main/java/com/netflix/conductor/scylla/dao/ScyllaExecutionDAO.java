@@ -376,8 +376,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                 verifyTaskStatus(task);
             }
             redisLock.releaseLock(task.getTaskId());
-            LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", task.getTaskId(),
-                    task.getWorkflowInstanceId(), task.getStatus(), (System.currentTimeMillis() - start));
+            LOGGER.info("[Conductor] [ScyllaExecutionDAO] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
+                    task.getTaskId(), task.getWorkflowInstanceId(), task.getStatus(), (System.currentTimeMillis() - start));
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "updateTask");
             String errorMsg =
