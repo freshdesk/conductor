@@ -715,7 +715,13 @@ public class WorkflowExecutor {
 
         String workflowId = taskResult.getWorkflowInstanceId();
         WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, false);
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] workflowInstance Time taken for task: {},for workflowInstanceId {} and status {} "
+                        + "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start));
 
+        long start1 = System.currentTimeMillis();
         TaskModel task =
                 Optional.ofNullable(executionDAOFacade.getTaskModel(taskResult.getTaskId()))
                         .orElseThrow(
@@ -723,6 +729,11 @@ public class WorkflowExecutor {
                                         new NotFoundException(
                                                 "No such task found by id: %s",
                                                 taskResult.getTaskId()));
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] getTaskModel Time taken for task: {},for workflowInstanceId {} and status {} "
+                        + "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start1));
 
         LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
                 task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
@@ -839,9 +850,15 @@ public class WorkflowExecutor {
 
         // Throw a TransientException if below operations fail to avoid workflow inconsistencies.
         try {
+            long start2 = System.currentTimeMillis();
             LOGGER.debug("WE calling SED.updateTask: taskId {} with taskStatus {} belonging to workflowId {} and workflowStatus {}",
                     task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
             executionDAOFacade.updateTask(task);
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] internal updateTask Time taken for task: {},for workflowInstanceId {} and status {} "
+                            + "and workerId {} and time is :{}",
+                    taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                    (System.currentTimeMillis() - start2));
         } catch (Exception e) {
             String errorMsg =
                     String.format(
@@ -874,12 +891,18 @@ public class WorkflowExecutor {
                     task.getTaskDefName(), lastDuration, false, task.getStatus());
         }
 
+        long start3 = System.currentTimeMillis();
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
             decide(workflowId);
         }
-        LOGGER.info("[Conductor] [WorkflowExecutor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
-                taskResult.getTaskId(),
-                taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] decide Time taken for task: {},for workflowInstanceId {} and status {} "
+                        + "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start3));
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] complete updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
     }
 
     private void notifyTaskStatusListener(TaskModel task) {
