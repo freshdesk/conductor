@@ -492,6 +492,7 @@ public class ExecutionDAOFacade {
      *     payload fails.
      */
     public void updateTask(TaskModel taskModel) {
+        long start = System.currentTimeMillis();
         if (taskModel.getStatus() != null) {
             if (!taskModel.getStatus().isTerminal()
                     || (taskModel.getStatus().isTerminal() && taskModel.getUpdateTime() == 0)) {
@@ -524,6 +525,8 @@ public class ExecutionDAOFacade {
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
+        LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", taskModel.getTaskId(),
+                taskModel.getWorkflowInstanceId(), taskModel.getStatus(), (System.currentTimeMillis() - start));
     }
 
     public void updateTasks(List<TaskModel> tasks) {

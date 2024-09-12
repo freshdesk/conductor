@@ -82,9 +82,13 @@ public class TaskResource {
     @PostMapping(produces = TEXT_PLAIN_VALUE)
     @Operation(summary = "Update a task")
     public String updateTask(@RequestBody TaskResult taskResult) {
+        long start = System.currentTimeMillis();
         LOGGER.debug("Received updateTask for task: {},for workflowInstanceId {} and status {} ",
                 taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus());
-        return taskService.updateTask(taskResult);
+        String result = taskService.updateTask(taskResult);
+        LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", taskResult.getTaskId(),
+                taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
+        return result;
     }
 
     @PostMapping("/{taskId}/log")

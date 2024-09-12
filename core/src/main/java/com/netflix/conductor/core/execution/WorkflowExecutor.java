@@ -705,6 +705,7 @@ public class WorkflowExecutor {
      * @throws NotFoundException if the Task is not found.
      */
     public void updateTask(TaskResult taskResult) {
+        long start = System.currentTimeMillis();
         if (taskResult == null) {
             throw new IllegalArgumentException("Task object is null");
         } else if (taskResult.isExtendLease()) {
@@ -876,6 +877,8 @@ public class WorkflowExecutor {
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
             decide(workflowId);
         }
+        LOGGER.info("[Conductor] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}", taskResult.getTaskId(),
+                taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
     }
 
     private void notifyTaskStatusListener(TaskModel task) {
