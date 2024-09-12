@@ -855,7 +855,7 @@ public class WorkflowExecutor {
                     task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
             executionDAOFacade.updateTask(task);
             LOGGER.info(
-                    "[Conductor] [WorkflowExecutor] internal updateTask Time taken for task: {},for workflowInstanceId {} and status {} "
+                        "[Conductor] [WorkflowExecutor] internal updateTask Time taken for task: {},for workflowInstanceId {} and status {} "
                             + "and workerId {} and time is :{}",
                     taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
                     (System.currentTimeMillis() - start2));
@@ -1071,25 +1071,40 @@ public class WorkflowExecutor {
             return workflow;
         }
 
+        long start1 = System.currentTimeMillis();
         // we find any sub workflow tasks that have changed
         // and change the workflow/task state accordingly
         adjustStateIfSubWorkflowChanged(workflow);
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] [decide] adjustStateIfSubWorkflowChanged Time taken for workflowInstanceId {} " + "and time is :{}",
+                workflow.getWorkflowId(), (System.currentTimeMillis() - start1));
 
         try {
+            long start2 = System.currentTimeMillis();
             DeciderService.DeciderOutcome outcome = deciderService.decide(workflow);
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] deciderService.decide Time taken for workflowInstanceId {} " + "and time is :{}",
+                    workflow.getWorkflowId(), (System.currentTimeMillis() - start2));
             if (outcome.isComplete) {
                 endExecution(workflow, outcome.terminateTask);
                 return workflow;
             }
 
+            long start3 = System.currentTimeMillis();
             List<TaskModel> tasksToBeScheduled = outcome.tasksToBeScheduled;
             setTaskDomains(tasksToBeScheduled, workflow);
             List<TaskModel> tasksToBeUpdated = outcome.tasksToBeUpdated;
 
             tasksToBeScheduled = dedupAndAddTasks(workflow, tasksToBeScheduled);
 
-            boolean stateChanged = scheduleTask(workflow, tasksToBeScheduled); // start
 
+            long start4 = System.currentTimeMillis();
+            boolean stateChanged = scheduleTask(workflow, tasksToBeScheduled); // start
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] scheduleTask Time taken for workflowInstanceId {} and time is :{}",
+                    workflow.getWorkflowId(), (System.currentTimeMillis() - start4));
+
+            long start5 = System.currentTimeMillis();
             for (TaskModel task : outcome.tasksToBeScheduled) {
                 executionDAOFacade.populateTaskData(task);
                 if (systemTaskRegistry.isSystemTask(task.getTaskType())
@@ -1107,15 +1122,24 @@ public class WorkflowExecutor {
             if (!outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty()) {
                 executionDAOFacade.updateTasks(tasksToBeUpdated);
             }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] scheduleTask Time taken for workflowInstanceId {} and stateChanged {} and time is :{}",
+                    workflow.getWorkflowId(), stateChanged, (System.currentTimeMillis() - start5));
 
+            long start6 = System.currentTimeMillis();
             if (stateChanged) {
                 return decide(workflow);
             }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] stateChanged decide Time taken for workflowInstanceId {} and time is :{}",
+                    workflow.getWorkflowId(), (System.currentTimeMillis() - start6));
 
             if (!outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty()) {
                 executionDAOFacade.updateWorkflow(workflow);
             }
-
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] outcome not complete Time taken for workflowInstanceId {} and time is :{}",
+                    workflow.getWorkflowId(), (System.currentTimeMillis() - start3));
             return workflow;
 
         } catch (TerminateWorkflowException twe) {
