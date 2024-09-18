@@ -88,7 +88,7 @@ public class WorkflowTask {
     // Populates for the tasks of the decision type
     @ProtoField(id = 9)
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    private Map<String, List<@Valid WorkflowTask>> decisionCases = new LinkedHashMap<>();
+    private Map<String, @Valid List<@Valid WorkflowTask>> decisionCases = new LinkedHashMap<>();
 
     @Deprecated private String dynamicForkJoinTasksParam;
 
