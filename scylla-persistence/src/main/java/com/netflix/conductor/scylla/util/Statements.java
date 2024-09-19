@@ -283,6 +283,7 @@ public class Statements {
                 .value(PAYLOAD_KEY, bindMarker())
                 .value(TOTAL_TASKS_KEY, bindMarker())
                 .value(TOTAL_PARTITIONS_KEY, bindMarker())
+                .value(VERSION, bindMarker())
                 .getQueryString();
     }
 
@@ -416,7 +417,7 @@ public class Statements {
      *     table
      */
     public String getSelectWorkflowStatement() {
-        return QueryBuilder.select(PAYLOAD_KEY)
+        return QueryBuilder.select(PAYLOAD_KEY,VERSION)
                 .from(keyspace, TABLE_WORKFLOWS)
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
                 .and(eq(SHARD_ID_KEY, bindMarker()))
@@ -502,10 +503,12 @@ public class Statements {
     public String getUpdateWorkflowStatement() {
         return QueryBuilder.update(keyspace, TABLE_WORKFLOWS)
                 .with(set(PAYLOAD_KEY, bindMarker()))
+                .and(set(VERSION, bindMarker()))
                 .where(eq(WORKFLOW_ID_KEY, bindMarker()))
                 .and(eq(SHARD_ID_KEY, bindMarker()))
                 .and(eq(ENTITY_KEY, ENTITY_TYPE_WORKFLOW))
                 .and(eq(TASK_ID_KEY, ""))
+                .onlyIf(eq(VERSION, bindMarker()))
                 .getQueryString();
     }
 

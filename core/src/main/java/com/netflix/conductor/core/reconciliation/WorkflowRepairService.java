@@ -92,6 +92,7 @@ public class WorkflowRepairService {
      * has relevant message in the queue.
      */
     public boolean verifyAndRepairWorkflow(String workflowId, boolean includeTasks) {
+        LOGGER.debug("Triggered verifyAndRepairWorkflow for workflowId {} with includeTasks {} ", workflowId, includeTasks);
         WorkflowModel workflow = executionDAO.getWorkflow(workflowId, includeTasks);
         AtomicBoolean repaired = new AtomicBoolean(false);
         repaired.set(verifyAndRepairDeciderQueue(workflow));
@@ -137,9 +138,10 @@ public class WorkflowRepairService {
         if (isTaskRepairable.test(task)) {
             // Ensure QueueDAO contains this taskId
             String taskQueueName = QueueUtils.getQueueName(task);
+            LOGGER.debug("Inside verifyAndRepairTask for taskQueueName{} taskId {} for workflowId {}", taskQueueName, task.getTaskId() , task.getWorkflowInstanceId());
             if (!queueDAO.containsMessage(taskQueueName, task.getTaskId())) {
                 queueDAO.push(taskQueueName, task.getTaskId(), task.getCallbackAfterSeconds());
-                LOGGER.info(
+                LOGGER.debug(
                         "Task {} in workflow {} re-queued for repairs",
                         task.getTaskId(),
                         task.getWorkflowInstanceId());
@@ -150,7 +152,7 @@ public class WorkflowRepairService {
                 && task.getStatus() == TaskModel.Status.IN_PROGRESS) {
             WorkflowModel subWorkflow = executionDAO.getWorkflow(task.getSubWorkflowId(), false);
             if (subWorkflow.getStatus().isTerminal()) {
-                LOGGER.info(
+                LOGGER.debug(
                         "Repairing sub workflow task {} for sub workflow {} in workflow {}",
                         task.getTaskId(),
                         task.getSubWorkflowId(),
@@ -168,7 +170,7 @@ public class WorkflowRepairService {
             if (!queueDAO.containsMessage(queueName, workflowId)) {
                 queueDAO.push(
                         queueName, workflowId, properties.getWorkflowOffsetTimeout().getSeconds());
-                LOGGER.info("Workflow {} re-queued for repairs", workflowId);
+                LOGGER.debug("Workflow {} re-queued for repairs", workflowId);
                 Monitors.recordQueueMessageRepushFromRepairService(queueName);
                 return true;
             }

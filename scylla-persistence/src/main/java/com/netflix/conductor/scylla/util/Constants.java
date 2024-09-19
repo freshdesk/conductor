@@ -34,6 +34,7 @@ public interface Constants {
     String ENTITY_KEY = "entity";
     String PAYLOAD_KEY = "payload";
     String TOTAL_TASKS_KEY = "total_tasks";
+    String VERSION = "version";
     String TOTAL_PARTITIONS_KEY = "total_partitions";
     String TASK_DEF_NAME_KEY = "task_def_name";
     String WORKFLOW_DEF_NAME_KEY = "workflow_def_name";

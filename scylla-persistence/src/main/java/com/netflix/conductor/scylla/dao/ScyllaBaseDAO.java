@@ -137,6 +137,7 @@ public abstract class ScyllaBaseDAO {
                 .addClusteringColumn(ENTITY_KEY, DataType.text())
                 .addClusteringColumn(TASK_ID_KEY, DataType.text())
                 .addColumn(PAYLOAD_KEY, DataType.text())
+                .addColumn(VERSION, DataType.cint())
                 .addStaticColumn(TOTAL_TASKS_KEY, DataType.cint())
                 .addStaticColumn(TOTAL_PARTITIONS_KEY, DataType.cint())
                 .getQueryString();
