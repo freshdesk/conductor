@@ -392,6 +392,50 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         }
     }
 
+    @Override
+    public void updateTasksInBatch(List<TaskModel> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return; // No tasks to process
+        }
+
+        long startBatch = System.currentTimeMillis();
+
+        try {
+            // Acquire a global lock for batch update if needed
+            // Create a batch statement to execute multiple updates in one call
+            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.LOGGED);
+
+            // Loop through the list of tasks and prepare batch updates
+            for (TaskModel task : tasks) {
+                Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
+                String taskPayload = toJson(task);
+
+                // Add the update statement for each task to the batch
+                batchStatement.add(
+                        insertTaskStatement.bind(
+                                UUID.fromString(task.getWorkflowInstanceId()),
+                                correlationId,
+                                task.getTaskId(),
+                                taskPayload
+                        )
+                );
+            }
+
+            // Execute the batch of updates
+            long tstart = System.currentTimeMillis();
+            session.execute(batchStatement);
+            LOGGER.info("Batch execution of task updates completed in {} ms for {} tasks.",
+                    (System.currentTimeMillis() - tstart), tasks.size());
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "updateTaskInBatch");
+            String errorMsg = String.format("Error updating batch of tasks. Size: %d", tasks.size());
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
+        LOGGER.info("[Conductor] [ScyllaExecutionDAO] Batch updateTask Time taken for {} tasks: {} ms",
+                tasks.size(), (System.currentTimeMillis() - startBatch));
+    }
+
     /**
      *  @method to verify the task status and update the task_in_progress table
      *  also removes if its a terminal task
