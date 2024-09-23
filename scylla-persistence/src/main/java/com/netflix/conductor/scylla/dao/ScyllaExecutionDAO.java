@@ -367,13 +367,16 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                                     correlationId,
                                     task.getTaskId(),
                                     taskPayload));
-                    LOGGER.info("Conductor insertTaskStatement for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                    LOGGER.info("[Conductor] insertTaskStatement for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
                             task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
 
                     LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
                             task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                 }
+                long tstart = System.currentTimeMillis();
                 verifyTaskStatus(task);
+                LOGGER.info("[Conductor] verifyTaskStatus for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                        task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
             }
             redisLock.releaseLock(task.getTaskId());
             LOGGER.info("[Conductor] [ScyllaExecutionDAO] updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
@@ -399,10 +402,16 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         && task.getStatus().equals(TaskModel.Status.IN_PROGRESS);
             updateTaskInProgress( task,  inProgress);
             if (task.getStatus().isTerminal()) {
+                long tstart = System.currentTimeMillis();
                 removeTaskFromLimit(task);
                 removeTaskInProgress(task);
+                LOGGER.info("[Conductor] verifyTaskStatus isTerminal for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                        task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart);
             } else if (task.getStatus() == TaskModel.Status.IN_PROGRESS) {
+                long tstart1 = System.currentTimeMillis();
                 addTaskToLimit(task);
+                LOGGER.info("[Conductor] verifyTaskStatus addTaskToLimit for task.getWorkflowInstanceId {} and task.getTaskId {} is {} ",
+                        task.getWorkflowInstanceId(), task.getTaskId(), System.currentTimeMillis() - tstart1);
             }
     }
 
