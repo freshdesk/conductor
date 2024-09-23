@@ -894,9 +894,7 @@ public class WorkflowExecutor {
 
         long start3 = System.currentTimeMillis();
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                decide(workflowId);
-            });
+            decide(workflowId);
         }
         LOGGER.info(
                 "[Conductor] [WorkflowExecutor] decide Time taken for task: {},for workflowInstanceId {} and status {} "
