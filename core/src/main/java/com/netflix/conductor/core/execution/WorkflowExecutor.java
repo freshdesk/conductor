@@ -13,6 +13,7 @@
 package com.netflix.conductor.core.execution;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -893,7 +894,9 @@ public class WorkflowExecutor {
 
         long start3 = System.currentTimeMillis();
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            decide(workflowId);
+            CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                decide(workflowId);
+            });
         }
         LOGGER.info(
                 "[Conductor] [WorkflowExecutor] decide Time taken for task: {},for workflowInstanceId {} and status {} "
