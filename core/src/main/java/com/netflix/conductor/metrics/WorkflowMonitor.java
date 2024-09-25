@@ -101,13 +101,13 @@ public class WorkflowMonitor {
                 taskDefs.forEach(
                         taskDef -> {
                         long size = queueDAO.getSize(taskDef.getName());
-                        long inProgressCount =
-                                executionDAOFacade.getInProgressTaskCount(taskDef.getName());
+                        // long inProgressCount =
+                        //         executionDAOFacade.getInProgressTaskCount(taskDef.getName());
                         Monitors.recordQueueDepth(taskDef.getName(), size, taskDef.getOwnerApp());
-                        if (taskDef.concurrencyLimit() > 0) {
-                                Monitors.recordTaskInProgress(
-                                        taskDef.getName(), inProgressCount, taskDef.getOwnerApp());
-                        }
+                        // if (taskDef.concurrencyLimit() > 0) {
+                        //         Monitors.recordTaskInProgress(
+                        //                 taskDef.getName(), inProgressCount, taskDef.getOwnerApp());
+                        // }
                         });
         } catch (Exception e) {
                 LOGGER.error("Error while publishing scheduled metrics", e);
@@ -117,13 +117,13 @@ public class WorkflowMonitor {
                 asyncSystemTasks.forEach(
                         workflowSystemTask -> {
                         long size = queueDAO.getSize(workflowSystemTask.getTaskType());
-                        long inProgressCount =
-                                executionDAOFacade.getInProgressTaskCount(
-                                        workflowSystemTask.getTaskType());
+                        // long inProgressCount =
+                        //         executionDAOFacade.getInProgressTaskCount(
+                        //                 workflowSystemTask.getTaskType());
                         Monitors.recordQueueDepth(workflowSystemTask.getTaskType(), size, "system");
-                        Monitors.recordTaskInProgress(
-                                workflowSystemTask.getTaskType(), inProgressCount, "system");
-                        });
+                        // Monitors.recordTaskInProgress(
+                        //         workflowSystemTask.getTaskType(), inProgressCount, "system");
+                        // });
         } catch (Exception e) {
                 LOGGER.error("Error while publishing scheduled metrics", e);
         }
