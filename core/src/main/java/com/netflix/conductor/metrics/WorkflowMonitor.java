@@ -103,6 +103,7 @@ public class WorkflowMonitor {
                         long size = queueDAO.getSize(taskDef.getName());
                         // long inProgressCount =
                         //         executionDAOFacade.getInProgressTaskCount(taskDef.getName());
+                        LOGGER.error("recording monitor queue depth");
                         Monitors.recordQueueDepth(taskDef.getName(), size, taskDef.getOwnerApp());
                         // if (taskDef.concurrencyLimit() > 0) {
                         //         Monitors.recordTaskInProgress(
@@ -120,6 +121,7 @@ public class WorkflowMonitor {
                         // long inProgressCount =
                         //         executionDAOFacade.getInProgressTaskCount(
                         //                 workflowSystemTask.getTaskType());
+                        LOGGER.error("recording monitor system queue depth");
                         Monitors.recordQueueDepth(workflowSystemTask.getTaskType(), size, "system");
                         // Monitors.recordTaskInProgress(
                         //         workflowSystemTask.getTaskType(), inProgressCount, "system");
