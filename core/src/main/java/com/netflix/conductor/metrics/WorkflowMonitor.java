@@ -74,8 +74,8 @@ public class WorkflowMonitor {
     }
 
     @Scheduled(
-            initialDelayString = "${conductor.workflow-monitor.stats.initial-delay:120000}",
-            fixedDelayString = "${conductor.workflow-monitor.stats.delay:60000}")
+            initialDelayString = "${conductor.workflow-monitor.stats.initial-delay:30000}",
+            fixedDelayString = "${conductor.workflow-monitor.stats.delay:10000}")
     public void reportMetrics() {
         if (refreshCounter <= 0) {
                 workflowDefs = metadataService.getWorkflowDefs();
@@ -123,7 +123,7 @@ public class WorkflowMonitor {
                         Monitors.recordQueueDepth(workflowSystemTask.getTaskType(), size, "system");
                         // Monitors.recordTaskInProgress(
                         //         workflowSystemTask.getTaskType(), inProgressCount, "system");
-                        // });
+                        });
         } catch (Exception e) {
                 LOGGER.error("Error while publishing scheduled metrics", e);
         }
