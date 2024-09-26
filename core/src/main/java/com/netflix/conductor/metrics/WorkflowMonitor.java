@@ -74,8 +74,8 @@ public class WorkflowMonitor {
     }
 
     @Scheduled(
-            initialDelayString = "${conductor.workflow-monitor.stats.initial-delay:30000}",
-            fixedDelayString = "${conductor.workflow-monitor.stats.delay:10000}")
+            initialDelayString = "${conductor.workflow-monitor.stats.initial-delay:120000}",
+            fixedDelayString = "${conductor.workflow-monitor.stats.delay:60000}")
     public void reportMetrics() {
         if (refreshCounter <= 0) {
                 workflowDefs = metadataService.getWorkflowDefs();
