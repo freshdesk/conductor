@@ -237,6 +237,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      */
     @Override
     public List<TaskModel> createTasks(List<TaskModel> tasks) {
+        long start = System.currentTimeMillis();
         validateTasks(tasks);
         String workflowId = tasks.get(0).getWorkflowInstanceId();
         String corelationId = tasks.get(0).getCorrelationId();
@@ -247,8 +248,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
             // update the task_lookup table
             // update the workflow_lookup table
-            LOGGER.debug("Create tasks list {} for workflowId {} ",tasks.stream()
-                            .map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),workflowId);
+            LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] Create tasks list {} for workflowId {} ",
+                    tasks.stream().map(TaskModel::getReferenceTaskName).collect(Collectors.toList()), workflowId);
+            long start1 = System.currentTimeMillis();
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
@@ -263,7 +265,11 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
-
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] 1st createTasks Time taken for workflowInstanceId {} "
+                            + "and tasks.size {} and time is :{}", workflowId, tasks.size(), (System.currentTimeMillis() - start1));
+            
+            start1 = System.currentTimeMillis();
             // update all the tasks in the workflow using batch
             BatchStatement batchStatement = new BatchStatement();
             tasks.forEach(
@@ -290,11 +296,19 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
             session.execute(batchStatement);
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] 2nd updateTotalTasksStatement Time taken for workflowInstanceId {} "
+                            + "and tasks.size {} and time is :{}", workflowId, tasks.size(), (System.currentTimeMillis() - start1));
+            start1 = System.currentTimeMillis();
             // update the total tasks and partitions for the workflow
-            session.execute(
-                    updateTotalPartitionsStatement.bind(
-                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+            session.execute(updateTotalPartitionsStatement.bind(DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] 3rd updateTotalPartitionsStatement Time taken for workflowInstanceId {} "
+                            + "and tasks.size {} and time is :{}", workflowId, tasks.size(), (System.currentTimeMillis() - start1));
 
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] final createTasks Time taken for workflowInstanceId {} "
+                            + "and tasks.size {} and time is :{}", workflowId, tasks.size(), (System.currentTimeMillis() - start));
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
