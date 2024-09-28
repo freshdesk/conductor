@@ -1498,6 +1498,7 @@ public class WorkflowExecutor {
 
     @VisibleForTesting
     boolean scheduleTask(WorkflowModel workflow, List<TaskModel> tasks) {
+        long start1 = System.currentTimeMillis();
         List<TaskModel> tasksToBeQueued;
         boolean startedSystemTasks = false;
 
@@ -1521,8 +1522,12 @@ public class WorkflowExecutor {
                     workflow.getWorkflowName(),
                     String.valueOf(workflow.getWorkflowVersion()));
 
+            long start2 = System.currentTimeMillis();
             // Save the tasks in the DAO
             executionDAOFacade.createTasks(tasks);
+            LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] 1st createTasks Time taken for workflowInstanceId {} " +
+                            "and tasks.size {} and time is :{}", workflow.getWorkflowId(), tasks.size(),
+                    (System.currentTimeMillis() - start2));
 
             List<TaskModel> systemTasks =
                     tasks.stream()
@@ -1561,7 +1566,12 @@ public class WorkflowExecutor {
                         throw new NonTransientException(errorMsg, e);
                     }
                     startedSystemTasks = true;
+                    start2 = System.currentTimeMillis();
+                    // Save the tasks in the DAO
                     executionDAOFacade.updateTask(task);
+                    LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] 2nd updateTask Time taken for workflowInstanceId {} " +
+                                    "and tasks.size {} and time is :{}", workflow.getWorkflowId(), tasks.size(),
+                            (System.currentTimeMillis() - start2));
                 } else {
                     tasksToBeQueued.add(task);
                 }
@@ -1593,6 +1603,10 @@ public class WorkflowExecutor {
             LOGGER.warn(errorMsg, e);
             Monitors.error(CLASS_NAME, "scheduleTask");
         }
+
+        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] final scheduleTask Time taken for workflowInstanceId {} " +
+                        "and tasksToBeQueued.size {} and time is :{}", workflow.getWorkflowId(), tasksToBeQueued.size(),
+                (System.currentTimeMillis() - start1));
         return startedSystemTasks;
     }
 
