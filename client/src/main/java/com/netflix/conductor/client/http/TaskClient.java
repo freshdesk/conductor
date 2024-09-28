@@ -236,8 +236,12 @@ public class TaskClient extends ClientBase {
      * @param taskResult the {@link TaskResult} of the executed task to be updated.
      */
     public void updateTask(TaskResult taskResult) {
+        long start = System.currentTimeMillis();
         Validate.notNull(taskResult, "Task result cannot be null");
         postForEntityWithRequestOnly("tasks", taskResult);
+        LOGGER.info("[Conductor] time taken by task {} for WF {} in updateTask is {}", taskResult.getTaskId(),
+                taskResult.getWorkflowInstanceId(),
+                (System.currentTimeMillis() - start));
     }
 
     public Optional<String> evaluateAndUploadLargePayload(

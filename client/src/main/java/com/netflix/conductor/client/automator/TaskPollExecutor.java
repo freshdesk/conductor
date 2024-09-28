@@ -164,7 +164,7 @@ class TaskPollExecutor {
             for (Task task : tasks) {
                 if (Objects.nonNull(task) && StringUtils.isNotBlank(task.getTaskId())) {
                     MetricsContainer.incrementTaskPollCount(taskType, 1);
-                    LOGGER.debug(
+                    LOGGER.info(
                             "Polled task: {} of type: {} in domain: '{}', from worker: {}",
                             task.getTaskId(),
                             taskType,
@@ -236,6 +236,7 @@ class TaskPollExecutor {
             };
 
     private Task processTask(Task task, Worker worker, PollingSemaphore pollingSemaphore) {
+        long start = System.currentTimeMillis();
         LOGGER.debug(
                 "Executing task: {} of type: {} in worker: {} at {}",
                 task.getTaskId(),
@@ -251,10 +252,13 @@ class TaskPollExecutor {
         } finally {
             pollingSemaphore.complete(1);
         }
+        LOGGER.info("[Conductor] time taken by task {} for WF {} in processTask is {}", task.getTaskId(), task.getWorkflowInstanceId(),
+                (System.currentTimeMillis() - start));
         return task;
     }
 
     private void executeTask(Worker worker, Task task) {
+        long start = System.currentTimeMillis();
         StopWatch stopwatch = new StopWatch();
         stopwatch.start();
         TaskResult result = null;
@@ -292,6 +296,8 @@ class TaskPollExecutor {
                 worker.getIdentity(),
                 result.getStatus());
         updateTaskResult(updateRetryCount, task, result, worker);
+        LOGGER.info("[Conductor] time taken by task {} for WF {} in executeTask is {}", task.getTaskId(), task.getWorkflowInstanceId(),
+                (System.currentTimeMillis() - start));
     }
 
     private void finalizeTask(Task task, Throwable throwable) {
@@ -334,7 +340,11 @@ class TaskPollExecutor {
 
             retryOperation(
                     (TaskResult taskResult) -> {
+                        long start = System.currentTimeMillis();
                         taskClient.updateTask(taskResult);
+                        LOGGER.info("[Conductor] time taken by task {} for WF {} in updateTaskResult is {}", task.getTaskId(),
+                                task.getWorkflowInstanceId(),
+                                (System.currentTimeMillis() - start));
                         return null;
                     },
                     count,
