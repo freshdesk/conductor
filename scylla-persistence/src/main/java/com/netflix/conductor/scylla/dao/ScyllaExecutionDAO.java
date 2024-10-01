@@ -253,19 +253,23 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             long start1 = System.currentTimeMillis();
             tasks.forEach(
                     task -> {
+                        long start2 = System.currentTimeMillis();
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
                         session.execute(
                                 updateTaskLookupStatement.bind(
                                         workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        session.execute(
-                                updateWorkflowLookupStatement.bind(
-                                        correlationId, workflowUUID));
-                        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] for workflowId {} ", workflowId);
+                        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup 1] for workflowId {} time {}",
+                                workflowId, (System.currentTimeMillis() - start2));
+                        session.execute(updateWorkflowLookupStatement.bind(correlationId, workflowUUID));
+                        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [workflow_lookup 2] for workflowId {} time {}",
+                                workflowId, (System.currentTimeMillis() - start2));
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
-                        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [workflow_lookup] for workflowId {} ", workflowId);
+                        LOGGER.info(
+                                "[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [add task in progress] for workflowId {} time {}",
+                                workflowId, (System.currentTimeMillis() - start2));
                     });
             LOGGER.info(
                     "[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] 1st createTasks Time taken for workflowInstanceId {} "
@@ -326,17 +330,16 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
-        ResultSet resultSet =
-                session.execute(
-                        selectTaskInProgressStatement.bind(task.getTaskDefName(),
-                                UUID.fromString(task.getTaskId())));
-        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [fetch task] for workflowId {} ",
-                task.getWorkflowInstanceId());
+        long start2 = System.currentTimeMillis();
+        ResultSet resultSet = session.execute(selectTaskInProgressStatement.bind(task.getTaskDefName(), UUID.fromString(task.getTaskId())));
+        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [fetch task] for workflowId {} time {}",
+                task.getWorkflowInstanceId(), System.currentTimeMillis() - start2);
         if (resultSet.all().isEmpty() || resultSet.all().size() < 1) {
+            long start3 = System.currentTimeMillis();
             session.execute(insertTaskInProgressStatement.bind(task.getTaskDefName(), UUID.fromString(task.getTaskId()),
                     UUID.fromString(task.getWorkflowInstanceId()), true));
-            LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [update task] for workflowId {} ",
-                    task.getWorkflowInstanceId());
+            LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [update task] for workflowId {} time {}",
+                    task.getWorkflowInstanceId(), System.currentTimeMillis() - start3);
         }
         else {
             LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
