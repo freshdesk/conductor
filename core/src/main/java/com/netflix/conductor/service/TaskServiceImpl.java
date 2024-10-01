@@ -128,10 +128,7 @@ public class TaskServiceImpl implements TaskService {
      * @return task Id of the updated task.
      */
     public String updateTask(TaskResult taskResult) {
-        CompletableFuture.supplyAsync(() -> {
-            executionService.updateTask(taskResult);
-            return null;
-        });
+        executionService.updateTask(taskResult);
         LOGGER.debug(
                 "TaskServiceImpl Task: {} updated successfully with callback time: {}",
                 taskResult.getTaskId(),
