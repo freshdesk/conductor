@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -127,7 +128,10 @@ public class TaskServiceImpl implements TaskService {
      * @return task Id of the updated task.
      */
     public String updateTask(TaskResult taskResult) {
-        executionService.updateTask(taskResult);
+        CompletableFuture.supplyAsync(() -> {
+            executionService.updateTask(taskResult);
+            return null;
+        });
         LOGGER.debug(
                 "TaskServiceImpl Task: {} updated successfully with callback time: {}",
                 taskResult.getTaskId(),
