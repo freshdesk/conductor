@@ -741,6 +741,8 @@ public class WorkflowExecutor {
 
         String taskQueueName = QueueUtils.getQueueName(task);
 
+        task.setStatus(IN_PROGRESS);
+
         if (task.getStatus().isTerminal()) {
             // Task was already updated....
             queueDAO.remove(taskQueueName, taskResult.getTaskId());
@@ -754,6 +756,8 @@ public class WorkflowExecutor {
                     task.getTaskType(), workflowInstance.getWorkflowName(), task.getStatus());
             return;
         }
+
+        workflowInstance.setStatus(WorkflowModel.Status.RUNNING);
 
         if (workflowInstance.getStatus().isTerminal()) {
             // Workflow is in terminal state
