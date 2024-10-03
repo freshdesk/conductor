@@ -13,6 +13,7 @@
 package com.netflix.conductor.core.execution;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -705,6 +706,7 @@ public class WorkflowExecutor {
      * @throws NotFoundException if the Task is not found.
      */
     public void updateTask(TaskResult taskResult) {
+        long start = System.currentTimeMillis();
         if (taskResult == null) {
             throw new IllegalArgumentException("Task object is null");
         } else if (taskResult.isExtendLease()) {
@@ -714,7 +716,30 @@ public class WorkflowExecutor {
 
         String workflowId = taskResult.getWorkflowInstanceId();
         WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, false);
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] workflowInstance Time taken for task: {},for workflowInstanceId {} and status {} "
+                        + "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start));
 
+        long start1 = System.currentTimeMillis();
+        List<TaskModel> tasks = workflowInstance.getTasks();
+        TaskModel task = null;
+        for (TaskModel t : tasks) {
+            if (t.getTaskId().equalsIgnoreCase(taskResult.getTaskId())) {
+                task = t;
+            }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] getTaskModel Time taken for task: {},for workflowInstanceId {} and status {} "
+                            + "and workerId {} and time is :{}",
+                    taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                    (System.currentTimeMillis() - start1));
+        }
+        if (task == null) {
+            throw new NotFoundException("No such task found by id: %s", taskResult.getTaskId());
+        }
+
+        /*long start1 = System.currentTimeMillis();
         TaskModel task =
                 Optional.ofNullable(executionDAOFacade.getTaskModel(taskResult.getTaskId()))
                         .orElseThrow(
@@ -722,6 +747,11 @@ public class WorkflowExecutor {
                                         new NotFoundException(
                                                 "No such task found by id: %s",
                                                 taskResult.getTaskId()));
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] getTaskModel Time taken for task: {},for workflowInstanceId {} and status {} "
+                        + "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start1));*/
 
         LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
                 task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
@@ -838,9 +868,15 @@ public class WorkflowExecutor {
 
         // Throw a TransientException if below operations fail to avoid workflow inconsistencies.
         try {
+            long start2 = System.currentTimeMillis();
             LOGGER.debug("WE calling SED.updateTask: taskId {} with taskStatus {} belonging to workflowId {} and workflowStatus {}",
                     task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
             executionDAOFacade.updateTask(task);
+            LOGGER.info(
+                        "[Conductor] [WorkflowExecutor] internal updateTask Time taken for task: {},for workflowInstanceId {} and status {} "
+                            + "and workerId {} and time is :{}",
+                    taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                    (System.currentTimeMillis() - start2));
         } catch (Exception e) {
             String errorMsg =
                     String.format(
@@ -861,7 +897,10 @@ public class WorkflowExecutor {
             LOGGER.error(errorMsg, e);
         }
 
-        taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
+        for(TaskExecLog taskExecLog : taskResult.getLogs()) {
+            taskExecLog.setTaskId(task.getTaskId());
+        }
+        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
         executionDAOFacade.addTaskExecLog(taskResult.getLogs());
 
         if (task.getStatus().isTerminal()) {
@@ -873,9 +912,19 @@ public class WorkflowExecutor {
                     task.getTaskDefName(), lastDuration, false, task.getStatus());
         }
 
+        long start3 = System.currentTimeMillis();
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            decide(workflowId);
+            //decide(workflowId);
+            decide(workflowInstance);
         }
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] decide Time taken for task: {},for workflowInstanceId {} and status {} "
+                        + "and workerId {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                (System.currentTimeMillis() - start3));
+        LOGGER.info(
+                "[Conductor] [WorkflowExecutor] complete updateTask Time taken for task: {},for workflowInstanceId {} and status {} and time is :{}",
+                taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), (System.currentTimeMillis() - start));
     }
 
     private void notifyTaskStatusListener(TaskModel task) {
@@ -1037,6 +1086,9 @@ public class WorkflowExecutor {
      *     No locking is required or lock is acquired externally
      */
     public WorkflowModel decide(WorkflowModel workflow) {
+        long start1 = System.currentTimeMillis();
+
+        long start2 = System.currentTimeMillis();
         if (workflow.getStatus().isTerminal()) {
             if (!workflow.getStatus().isSuccessful()) {
                 cancelNonTerminalTasks(workflow);
@@ -1047,7 +1099,6 @@ public class WorkflowExecutor {
         // we find any sub workflow tasks that have changed
         // and change the workflow/task state accordingly
         adjustStateIfSubWorkflowChanged(workflow);
-
         try {
             DeciderService.DeciderOutcome outcome = deciderService.decide(workflow);
             if (outcome.isComplete) {
@@ -1061,8 +1112,19 @@ public class WorkflowExecutor {
 
             tasksToBeScheduled = dedupAndAddTasks(workflow, tasksToBeScheduled);
 
-            boolean stateChanged = scheduleTask(workflow, tasksToBeScheduled); // start
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] 1st adjustStateIfSubWorkflowChanged Time taken for workflowInstanceId {} "
+                            + "and outcome.isComplete {} and time is :{}",
+                    workflow.getWorkflowId(), outcome.isComplete, (System.currentTimeMillis() - start2));
 
+            start2 = System.currentTimeMillis();
+            boolean stateChanged = scheduleTask(workflow, tasksToBeScheduled); // start
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] 2nd find scheduleTask stateChanged Time taken for workflowInstanceId {} "
+                            + "and stateChanged {} and time is :{}",
+                    workflow.getWorkflowId(), stateChanged, (System.currentTimeMillis() - start2));
+
+            long start3 = System.currentTimeMillis();
             for (TaskModel task : outcome.tasksToBeScheduled) {
                 executionDAOFacade.populateTaskData(task);
                 if (systemTaskRegistry.isSystemTask(task.getTaskType())
@@ -1076,21 +1138,35 @@ public class WorkflowExecutor {
                     }
                 }
             }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] 3rd loop outcome.tasksToBeScheduled Time taken for workflowInstanceId {} "
+                            + "and stateChanged {} and time is :{}",
+                    workflow.getWorkflowId(), stateChanged, (System.currentTimeMillis() - start3));
 
             if (!outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty()) {
                 executionDAOFacade.updateTasks(tasksToBeUpdated);
             }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] 4th scheduleTask and stateChanged Time taken for workflowInstanceId {} "
+                            + "and stateChanged {} and time is :{}",
+                    workflow.getWorkflowId(), stateChanged, (System.currentTimeMillis() - start2));
 
             if (stateChanged) {
                 return decide(workflow);
             }
-
-            if (!outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty()) {
+            start2 = System.currentTimeMillis();
+            boolean flag = !outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty();
+            if (flag) {
                 executionDAOFacade.updateWorkflow(workflow);
             }
-
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] 5th updateWorkflow and flag Time taken for workflowInstanceId {} "
+                            + "and flag {} and time is :{}",
+                    workflow.getWorkflowId(), flag, (System.currentTimeMillis() - start2));
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] [decide] final Whole decide complete Time taken for workflowInstanceId {} and time is :{}",
+                    workflow.getWorkflowId(), (System.currentTimeMillis() - start1));
             return workflow;
-
         } catch (TerminateWorkflowException twe) {
             LOGGER.info("Execution terminated of workflow: {}", workflow, twe);
             terminate(workflow, twe);
@@ -1443,6 +1519,7 @@ public class WorkflowExecutor {
 
     @VisibleForTesting
     boolean scheduleTask(WorkflowModel workflow, List<TaskModel> tasks) {
+        long start1 = System.currentTimeMillis();
         List<TaskModel> tasksToBeQueued;
         boolean startedSystemTasks = false;
 
@@ -1466,8 +1543,12 @@ public class WorkflowExecutor {
                     workflow.getWorkflowName(),
                     String.valueOf(workflow.getWorkflowVersion()));
 
+            long start2 = System.currentTimeMillis();
             // Save the tasks in the DAO
             executionDAOFacade.createTasks(tasks);
+            LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] 1st createTasks Time taken for workflowInstanceId {} " +
+                            "and tasks.size {} and time is :{}", workflow.getWorkflowId(), tasks.size(),
+                    (System.currentTimeMillis() - start2));
 
             List<TaskModel> systemTasks =
                     tasks.stream()
@@ -1506,7 +1587,12 @@ public class WorkflowExecutor {
                         throw new NonTransientException(errorMsg, e);
                     }
                     startedSystemTasks = true;
+                    start2 = System.currentTimeMillis();
+                    // Save the tasks in the DAO
                     executionDAOFacade.updateTask(task);
+                    LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] 2nd updateTask Time taken for workflowInstanceId {} " +
+                                    "and tasks.size {} and time is :{}", workflow.getWorkflowId(), tasks.size(),
+                            (System.currentTimeMillis() - start2));
                 } else {
                     tasksToBeQueued.add(task);
                 }
@@ -1538,6 +1624,10 @@ public class WorkflowExecutor {
             LOGGER.warn(errorMsg, e);
             Monitors.error(CLASS_NAME, "scheduleTask");
         }
+
+        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] final scheduleTask Time taken for workflowInstanceId {} " +
+                        "and tasksToBeQueued.size {} and time is :{}", workflow.getWorkflowId(), tasksToBeQueued.size(),
+                (System.currentTimeMillis() - start1));
         return startedSystemTasks;
     }
 

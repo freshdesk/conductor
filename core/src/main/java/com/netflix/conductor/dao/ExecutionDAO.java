@@ -53,6 +53,11 @@ public interface ExecutionDAO {
     void updateTask(TaskModel task);
 
     /**
+     * @param tasks Task to be updated
+     */
+    void updateTasksInBatch(List<TaskModel> tasks);
+
+    /**
      * Checks if the number of tasks in progress for the given taskDef will exceed the limit if the
      * task is scheduled to be in progress (given to the worker or for system tasks start() method
      * called)
