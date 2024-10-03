@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -82,6 +83,13 @@ public class TaskResource {
     @PostMapping(produces = TEXT_PLAIN_VALUE)
     @Operation(summary = "Update a task")
     public String updateTask(@RequestBody TaskResult taskResult) {
+        LOGGER.info("Update a task {}", taskResult);
+        try {
+            String jsonString = new ObjectMapper().writeValueAsString(taskResult);
+            System.out.println(jsonString);
+            LOGGER.info("Update a task jsonString {}", jsonString);
+        } catch (Exception ex) {
+        }
         long start = System.currentTimeMillis();
         LOGGER.debug("Received updateTask for task: {},for workflowInstanceId {} and status {} ",
                 taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus());
