@@ -723,6 +723,23 @@ public class WorkflowExecutor {
                 (System.currentTimeMillis() - start));
 
         long start1 = System.currentTimeMillis();
+        List<TaskModel> tasks = workflowInstance.getTasks();
+        TaskModel task = null;
+        for (TaskModel t : tasks) {
+            if (t.getTaskId().equalsIgnoreCase(taskResult.getTaskId())) {
+                task = t;
+            }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] getTaskModel Time taken for task: {},for workflowInstanceId {} and status {} "
+                            + "and workerId {} and time is :{}",
+                    taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                    (System.currentTimeMillis() - start1));
+        }
+        if (task == null) {
+            throw new NotFoundException("No such task found by id: %s", taskResult.getTaskId());
+        }
+
+        /*long start1 = System.currentTimeMillis();
         TaskModel task =
                 Optional.ofNullable(executionDAOFacade.getTaskModel(taskResult.getTaskId()))
                         .orElseThrow(
@@ -734,14 +751,12 @@ public class WorkflowExecutor {
                 "[Conductor] [WorkflowExecutor] getTaskModel Time taken for task: {},for workflowInstanceId {} and status {} "
                         + "and workerId {} and time is :{}",
                 taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
-                (System.currentTimeMillis() - start1));
+                (System.currentTimeMillis() - start1));*/
 
         LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
                 task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
 
         String taskQueueName = QueueUtils.getQueueName(task);
-
-        task.setStatus(IN_PROGRESS);
 
         if (task.getStatus().isTerminal()) {
             // Task was already updated....
@@ -756,8 +771,6 @@ public class WorkflowExecutor {
                     task.getTaskType(), workflowInstance.getWorkflowName(), task.getStatus());
             return;
         }
-
-        workflowInstance.setStatus(WorkflowModel.Status.RUNNING);
 
         if (workflowInstance.getStatus().isTerminal()) {
             // Workflow is in terminal state
@@ -884,7 +897,10 @@ public class WorkflowExecutor {
             LOGGER.error(errorMsg, e);
         }
 
-        taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
+        for(TaskExecLog taskExecLog : taskResult.getLogs()) {
+            taskExecLog.setTaskId(task.getTaskId());
+        }
+        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
         executionDAOFacade.addTaskExecLog(taskResult.getLogs());
 
         if (task.getStatus().isTerminal()) {
@@ -898,7 +914,8 @@ public class WorkflowExecutor {
 
         long start3 = System.currentTimeMillis();
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            decide(workflowId);
+            //decide(workflowId);
+            decide(workflowInstance);
         }
         LOGGER.info(
                 "[Conductor] [WorkflowExecutor] decide Time taken for task: {},for workflowInstanceId {} and status {} "
