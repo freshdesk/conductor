@@ -14,6 +14,7 @@ package com.netflix.conductor.scylla.dao;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -330,22 +331,27 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
-        long start2 = System.currentTimeMillis();
-        ResultSet resultSet = session.execute(selectTaskInProgressStatement.bind(task.getTaskDefName(), UUID.fromString(task.getTaskId())));
-        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [fetch task] for workflowId {} time {}",
-                task.getWorkflowInstanceId(), System.currentTimeMillis() - start2);
-        if (resultSet.all().isEmpty() || resultSet.all().size() < 1) {
-            long start3 = System.currentTimeMillis();
-            session.execute(insertTaskInProgressStatement.bind(task.getTaskDefName(), UUID.fromString(task.getTaskId()),
-                    UUID.fromString(task.getWorkflowInstanceId()), true));
-            LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [update task] for workflowId {} time {}",
-                    task.getWorkflowInstanceId(), System.currentTimeMillis() - start3);
-        }
-        else {
-            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
-                    ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
-        }
+        long start = System.currentTimeMillis();
 
+        // Insert task if it doesn't already exist using lightweight transaction
+        ResultSet resultSet = session.execute(
+                QueryBuilder.insertInto(properties.getKeyspace(), TABLE_TASK_IN_PROGRESS)
+                        .value(TASK_DEF_NAME_KEY, task.getTaskDefName())
+                        .value(TASK_ID_KEY, UUID.fromString(task.getTaskId()))
+                        .value(WORKFLOW_ID_KEY, UUID.fromString(task.getWorkflowInstanceId()))
+                        .value(TASK_IN_PROG_STATUS_KEY, true)
+                        .ifNotExists()  // Ensures this is a lightweight transaction
+                        .getQueryString()
+        );
+
+        // Log the time taken for the insert operation
+        LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_in_progress] [insert task] for workflowId {} time {}",
+                task.getWorkflowInstanceId(), System.currentTimeMillis() - start);
+
+        // Check if the insert succeeded (LWT returns if the insert happened or not)
+        if (!resultSet.wasApplied()) {
+            LOGGER.info("Task with defName {} and Id {} already exists, insert skipped.", task.getTaskDefName(), task.getTaskId());
+        }
     }
 
     /**
