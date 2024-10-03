@@ -527,7 +527,8 @@ public class ExecutionDAOFacade {
     }
 
     public void updateTasks(List<TaskModel> tasks) {
-        tasks.forEach(this::updateTask);
+        executionDAO.updateTasksInBatch(tasks);
+//        tasks.forEach(this::updateTask);
     }
 
     public void removeTask(String taskId) {
