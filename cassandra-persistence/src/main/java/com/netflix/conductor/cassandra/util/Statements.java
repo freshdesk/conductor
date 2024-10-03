@@ -339,8 +339,7 @@ public class Statements {
         return QueryBuilder.select()
                 .countAll()
                 .from(keyspace, TABLE_TASK_IN_PROGRESS)
-                .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
-                .and(eq(TASK_ID_KEY, bindMarker()))
+                .where(eq(TASK_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 
@@ -535,7 +534,7 @@ public class Statements {
         return QueryBuilder.update(keyspace, TABLE_TASK_LOOKUP)
                 .with(set(WORKFLOW_ID_KEY, bindMarker()))
                 .and(set(SHARD_ID_KEY, bindMarker()))
-                .where(eq(TASK_ID_KEY, bindMarker()))
+                .and(set(TASK_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 

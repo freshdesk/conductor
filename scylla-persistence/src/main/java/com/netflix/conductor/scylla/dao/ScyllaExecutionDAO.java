@@ -331,7 +331,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      */
     public void addTaskInProgress(TaskModel task) {
         long start2 = System.currentTimeMillis();
-        ResultSet resultSet = session.execute(selectTaskInProgressStatement.bind(task.getTaskDefName(), UUID.fromString(task.getTaskId())));
+        ResultSet resultSet = session.execute(selectTaskInProgressStatement.bind(UUID.fromString(task.getTaskId())));
         LOGGER.info("[Conductor] [WorkflowExecutor] [decide] [scheduleTask] [createTasks] [task_lookup] [fetch task] for workflowId {} time {}",
                 task.getWorkflowInstanceId(), System.currentTimeMillis() - start2);
         if (resultSet.all().isEmpty() || resultSet.all().size() < 1) {
