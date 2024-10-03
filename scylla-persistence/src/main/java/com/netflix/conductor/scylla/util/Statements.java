@@ -342,7 +342,8 @@ public class Statements {
         return QueryBuilder.select()
                 .countAll()
                 .from(keyspace, TABLE_TASK_IN_PROGRESS)
-                .where(eq(TASK_ID_KEY, bindMarker()))
+                .where(eq(TASK_DEF_NAME_KEY, bindMarker()))
+                .and(eq(TASK_ID_KEY, bindMarker()))
                 .getQueryString();
     }
 
