@@ -1078,7 +1078,7 @@ public class WorkflowExecutor {
             }
 
             if (!outcome.tasksToBeUpdated.isEmpty() || !tasksToBeScheduled.isEmpty()) {
-                executionDAOFacade.updateTasks(tasksToBeUpdated);
+                executionDAOFacade.updateTasksFromDecide(tasksToBeUpdated);
             }
 
             if (stateChanged) {

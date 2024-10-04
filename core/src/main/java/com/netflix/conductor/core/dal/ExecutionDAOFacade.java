@@ -527,8 +527,41 @@ public class ExecutionDAOFacade {
     }
 
     public void updateTasks(List<TaskModel> tasks) {
-        executionDAO.updateTasksInBatch(tasks);
-//        tasks.forEach(this::updateTask);
+        tasks.forEach(this::updateTask);
+    }
+
+    public void updateTasksFromDecide(List<TaskModel> tasks) {
+        updateTaskModels(tasks);
+    }
+
+    public void updateTaskModels(List<TaskModel> tasks) {
+        // Filtering tasks that require update and proceeding with batch update
+        List<TaskModel> tasksToUpdate = tasks.stream()
+                .filter(task -> {
+                    return task.getStatus() != null &&
+                            (!task.getStatus().isTerminal() || (task.getStatus().isTerminal() && task.getUpdateTime() == 0)) ||
+                            (task.getStatus().isTerminal() && task.getEndTime() == 0);
+                })
+                .collect(Collectors.toList());
+
+        // Externalize task data if needed before batching
+        tasksToUpdate.forEach(this::externalizeTaskData);
+
+        // Execute batch update
+        executionDAO.updateTasksInBatch(tasksToUpdate);
+
+        try {
+            if (!properties.isAsyncIndexingEnabled()) {
+                // Index tasks if async indexing is not enabled
+                tasksToUpdate.forEach(task -> indexDAO.indexTask(new TaskSummary(task.toTask())));
+            }
+        } catch (TerminateWorkflowException e) {
+            throw e;
+        } catch (Exception e) {
+            String errorMsg = "Error updating task batch in workflow.";
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
     }
 
     public void removeTask(String taskId) {
