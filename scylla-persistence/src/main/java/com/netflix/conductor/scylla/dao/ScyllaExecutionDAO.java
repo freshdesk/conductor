@@ -250,16 +250,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             int totalTasks = workflowMetadata.getTotalTasks() + tasks.size();
             // update the task_lookup table
             // update the workflow_lookup table
-            LOGGER.debug("Create tasks list {} for workflowId {} ",tasks.stream()
+            LOGGER.info("Create tasks list {} for workflowId {} ",tasks.stream()
                             .map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),workflowId);
             BatchStatement batch = new BatchStatement(BatchStatement.Type.LOGGED);
-
-            PreparedStatement insertTaskInProgressStmt = session.prepare(QueryBuilder.insertInto("conductor_lt", "task_in_progress")
-                    .value("task_def_name", bindMarker())
-                    .value("task_id", bindMarker())
-                    .value("workflow_id", bindMarker())
-                    .value("in_progress_status", bindMarker())
-                    .ifNotExists());
 
             tasks.forEach(
                     task -> {
@@ -275,10 +268,8 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         session.execute(
                                 updateWorkflowLookupStatement.bind(
                                         correlationId, workflowUUID));*/
-                        
-                        batch.add(insertTaskInProgressStmt.bind(
-                                task.getTaskDefName(), taskId, workflowUUID, true));
-                        //addTaskInProgress(task);
+
+                        addTaskInProgress(task);
                         String taskPayload = toJson(task);
                         batch.add(
                                 insertTaskStatement.bind(
@@ -334,6 +325,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
             return tasks;
         } catch (DriverException e) {
+            LOGGER.error("Error Message Create Tasks {} and getStackTrace {}", e.getMessage(), e.getStackTrace());
             Monitors.error(CLASS_NAME, "createTasks");
             String errorMsg =
                     String.format(
