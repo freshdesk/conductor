@@ -254,12 +254,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        session.execute(
-                                updateTaskLookupStatement.bind(
-                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        session.execute(
-                                updateWorkflowLookupStatement.bind(
-                                        correlationId, workflowUUID));
+                        BatchStatement batchStatement = new BatchStatement();
+                        batchStatement.add(updateTaskLookupStatement.bind(
+                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        batchStatement.add(updateWorkflowLookupStatement.bind(
+                                correlationId, workflowUUID));
+                        session.execute(batchStatement);
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
@@ -289,12 +289,10 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            session.execute(batchStatement);
             // update the total tasks and partitions for the workflow
-            session.execute(
-                    updateTotalPartitionsStatement.bind(
-                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
-
+            batchStatement.add(updateTotalPartitionsStatement.bind(
+                    DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+            session.execute(batchStatement);
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
@@ -310,22 +308,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
-        ResultSet resultSet =
-                session.execute(
-                        selectTaskInProgressStatement.bind(task.getTaskDefName(),
-                                UUID.fromString(task.getTaskId())));
-        if (resultSet.all().isEmpty() || resultSet.all().size()<1) {
-            session.execute(
-                    insertTaskInProgressStatement.bind(task.getTaskDefName(),
-                            UUID.fromString(task.getTaskId()),
-                            UUID.fromString(task.getWorkflowInstanceId()),
-                            true));
-        }
-        else {
-            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
-                    ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
-        }
+        ResultSet resultSet = session.execute("INSERT INTO task_in_progress (task_def_name, task_id, workflow_instance_id, task_in_prog_status) "
+                        + "VALUES (?, ?, ?, ?) IF NOT EXISTS", task.getTaskDefName(), UUID.fromString(task.getTaskId()),
+                UUID.fromString(task.getWorkflowInstanceId()), true);
 
+        if (!resultSet.wasApplied()) {
+            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as it already exists", task.getTaskDefName(),
+                    task.getTaskId(), task.getStatus());
+        }
     }
 
     /**
