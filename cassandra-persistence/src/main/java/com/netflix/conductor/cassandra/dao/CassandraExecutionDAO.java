@@ -361,6 +361,14 @@ public class CassandraExecutionDAO extends CassandraBaseDAO
         }
     }
 
+    @Override
+    public void updateTasksInBatch(List<TaskModel> tasks) {
+        TaskModel task = tasks.get(0);
+        LOGGER.debug(
+                "Workflow Task removed from TASKS_IN_PROGRESS_STATUS with tasksInProgressKey: {}, workflowId: {}, taskId: {}, taskType: {}, taskStatus: {} during updateTask",
+                task.getTaskDefName(), task.getWorkflowInstanceId(), task.getTaskId(), task.getTaskType(), task.getStatus().name());
+    }
+
     /**
      *  @method to verify the task status and update the task_in_progress table
      *  also removes if its a terminal task

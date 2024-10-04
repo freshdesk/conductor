@@ -314,7 +314,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                 session.execute(
                         selectTaskInProgressStatement.bind(task.getTaskDefName(),
                                 UUID.fromString(task.getTaskId())));
-        if (resultSet.all().isEmpty() || resultSet.all().size()<1) {
+        if (resultSet.isExhausted()) {
             session.execute(
                     insertTaskInProgressStatement.bind(task.getTaskDefName(),
                             UUID.fromString(task.getTaskId()),
@@ -325,7 +325,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
                     ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
         }
-
     }
 
     /**
@@ -377,6 +376,42 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     String.format(
                             "Error updating task: %s in workflow: %s",
                             task.getTaskId(), task.getWorkflowInstanceId());
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
+    }
+
+
+    @Override
+    public void updateTasksInBatch(List<TaskModel> tasks) {
+        BatchStatement batch = new BatchStatement();
+        try {
+            for (TaskModel task : tasks) {
+                Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
+                String taskPayload = toJson(task);
+
+                recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
+                recordCassandraDaoPayloadSize("updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
+                TaskModel prevTask = getTask(task.getTaskId());
+
+                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
+                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(), prevTask.getStatus());
+
+                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                    batch.add(insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
+
+                    LOGGER.debug("Prepared updateTask for task {} with taskStatus {} with taskRefName {} for workflowId {} ", task.getTaskId(),
+                            task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                }
+                verifyTaskStatus(task);
+            }
+
+            // Execute the batch update
+            session.execute(batch);
+            LOGGER.debug("Batch update executed for {} tasks", tasks.size());
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "updateTask");
+            String errorMsg = "Error updating tasks in batch for workflow.";
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
