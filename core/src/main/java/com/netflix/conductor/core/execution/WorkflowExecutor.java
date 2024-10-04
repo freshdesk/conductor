@@ -713,15 +713,18 @@ public class WorkflowExecutor {
         }
 
         String workflowId = taskResult.getWorkflowInstanceId();
-        WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, false);
+        WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, true);
 
-        TaskModel task =
-                Optional.ofNullable(executionDAOFacade.getTaskModel(taskResult.getTaskId()))
-                        .orElseThrow(
-                                () ->
-                                        new NotFoundException(
-                                                "No such task found by id: %s",
-                                                taskResult.getTaskId()));
+        List<TaskModel> tasks = workflowInstance.getTasks();
+        TaskModel task = null;
+        for(TaskModel t : tasks) {
+            if(t.getTaskId().equalsIgnoreCase(taskResult.getTaskId()))  {
+                task = t;
+            }
+        }
+        if (task == null) {
+            throw new NotFoundException("No such task found by id: %s", taskResult.getTaskId());
+        }
 
         LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
                 task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
@@ -861,7 +864,10 @@ public class WorkflowExecutor {
             LOGGER.error(errorMsg, e);
         }
 
-        taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
+        for (TaskExecLog taskExecLog : taskResult.getLogs()) {
+            taskExecLog.setTaskId(task.getTaskId());
+        }
+        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
         executionDAOFacade.addTaskExecLog(taskResult.getLogs());
 
         if (task.getStatus().isTerminal()) {
@@ -874,7 +880,8 @@ public class WorkflowExecutor {
         }
 
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            decide(workflowId);
+            //decide(workflowId);
+            decide(workflowInstance);
         }
     }
 

@@ -317,8 +317,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         .value(TASK_ID_KEY, UUID.fromString(task.getTaskId()))
                         .value(WORKFLOW_ID_KEY, UUID.fromString(task.getWorkflowInstanceId()))
                         .value(TASK_IN_PROG_STATUS_KEY, true)
-                        .ifNotExists()  // Ensures this is a lightweight transaction
-                        .getQueryString()
+                        .ifNotExists()
         );
         if (!resultSet.wasApplied()) {
             LOGGER.info("Task with defName {} and Id {} already exists, insert skipped.", task.getTaskDefName(), task.getTaskId());
