@@ -43,6 +43,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.bindMarker;
 import static com.netflix.conductor.scylla.util.Constants.*;
 
 @Trace
@@ -252,6 +253,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             LOGGER.debug("Create tasks list {} for workflowId {} ",tasks.stream()
                             .map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),workflowId);
             BatchStatement batch = new BatchStatement(BatchStatement.Type.LOGGED);
+
+            PreparedStatement insertTaskInProgressStmt = session.prepare(QueryBuilder.insertInto("conductor_lt", "task_in_progress")
+                    .value("task_def_name", bindMarker())
+                    .value("task_id", bindMarker())
+                    .value("workflow_id", bindMarker())
+                    .value("in_progress_status", bindMarker())
+                    .ifNotExists());
+
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
@@ -266,13 +275,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         session.execute(
                                 updateWorkflowLookupStatement.bind(
                                         correlationId, workflowUUID));*/
-                        Insert insertTaskInProgress = QueryBuilder.insertInto("conductor_lt", "task_in_progress")
-                                .value("task_def_name", task.getTaskDefName())
-                                .value("task_id", taskId)
-                                .value("workflow_id", workflowUUID)
-                                .value("in_progress_status", true)
-                                .ifNotExists();
-                        batch.add(session.prepare(insertTaskInProgress).bind());
+                        
+                        batch.add(insertTaskInProgressStmt.bind(
+                                task.getTaskDefName(), taskId, workflowUUID, true));
                         //addTaskInProgress(task);
                         String taskPayload = toJson(task);
                         batch.add(
