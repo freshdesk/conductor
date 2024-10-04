@@ -14,6 +14,8 @@ package com.netflix.conductor.scylla.dao;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.driver.core.querybuilder.Insert;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -249,22 +251,48 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             // update the workflow_lookup table
             LOGGER.debug("Create tasks list {} for workflowId {} ",tasks.stream()
                             .map(TaskModel::getReferenceTaskName).collect(Collectors.toList()),workflowId);
+            BatchStatement batch = new BatchStatement(BatchStatement.Type.LOGGED);
             tasks.forEach(
                     task -> {
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        session.execute(
+                        UUID taskId = toUUID(task.getTaskId(), "Invalid task id");
+                        batch.add(updateTaskLookupStatement.bind(workflowUUID, correlationId, taskId));
+                        batch.add(updateWorkflowLookupStatement.bind(correlationId, workflowUUID));
+                        /*session.execute(
                                 updateTaskLookupStatement.bind(
                                         workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
                         session.execute(
                                 updateWorkflowLookupStatement.bind(
-                                        correlationId, workflowUUID));
-                        // Added the task to task_in_progress table
-                        addTaskInProgress(task);
+                                        correlationId, workflowUUID));*/
+                        Insert insertTaskInProgress = QueryBuilder.insertInto("conductor_lt", "task_in_progress")
+                                .value("task_def_name", task.getTaskDefName())
+                                .value("task_id", taskId)
+                                .value("workflow_id", workflowUUID)
+                                .value("in_progress_status", true)
+                                .ifNotExists();
+                        batch.add(session.prepare(insertTaskInProgress).bind());
+                        //addTaskInProgress(task);
+                        String taskPayload = toJson(task);
+                        batch.add(
+                                insertTaskStatement.bind(
+                                        workflowUUID,
+                                        correlationId,
+                                        task.getTaskId(),
+                                        taskPayload));
+
+                        recordCassandraDaoRequests(
+                                "createTask", task.getTaskType(), task.getWorkflowType());
+
+                        recordCassandraDaoPayloadSize(
+                                "createTask",
+                                taskPayload.length(),
+                                task.getTaskType(),
+                                task.getWorkflowType());
                     });
 
-            // update all the tasks in the workflow using batch
+            /*// update all the tasks in the workflow using batch
             BatchStatement batchStatement = new BatchStatement();
             tasks.forEach(
                     task -> {
@@ -286,10 +314,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                                 task.getWorkflowType());
 
 
-                    });
-            batchStatement.add(
+                    });*/
+            batch.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            session.execute(batchStatement);
+            ResultSet batchResult = session.execute(batch);
+            if (!batchResult.wasApplied()) {
+                LOGGER.info("Task with defName and Id already exists. Insert skipped.");
+            }
+            //session.execute(batchStatement);
             // update the total tasks and partitions for the workflow
             session.execute(
                     updateTotalPartitionsStatement.bind(
@@ -310,22 +342,21 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
+        // Added the task to task_in_progress table
         ResultSet resultSet =
                 session.execute(
                         selectTaskInProgressStatement.bind(task.getTaskDefName(),
                                 UUID.fromString(task.getTaskId())));
-        if (resultSet.all().isEmpty() || resultSet.all().size()<1) {
+        if (resultSet.all().isEmpty() || resultSet.all().size() < 1) {
             session.execute(
                     insertTaskInProgressStatement.bind(task.getTaskDefName(),
                             UUID.fromString(task.getTaskId()),
                             UUID.fromString(task.getWorkflowInstanceId()),
                             true));
-        }
-        else {
+        } else {
             LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
-                    ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
+                    , task.getTaskDefName(), task.getTaskId(), task.getStatus());
         }
-
     }
 
     /**

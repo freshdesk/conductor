@@ -1123,6 +1123,9 @@ public class WorkflowExecutor {
     }
 
     private void adjustStateIfSubWorkflowChanged(WorkflowModel workflow) {
+        if (true) {
+            LOGGER.info("No subworkflow so return");
+        }
         Optional<TaskModel> changedSubWorkflowTask = findChangedSubWorkflowTask(workflow);
         if (changedSubWorkflowTask.isPresent()) {
             // reset the flag
