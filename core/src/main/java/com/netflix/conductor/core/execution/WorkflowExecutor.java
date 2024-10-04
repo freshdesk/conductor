@@ -713,15 +713,32 @@ public class WorkflowExecutor {
         }
 
         String workflowId = taskResult.getWorkflowInstanceId();
-        WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, false);
+        WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, true);
 
-        TaskModel task =
+        long start1 = System.currentTimeMillis();
+        List<TaskModel> tasks = workflowInstance.getTasks();
+        TaskModel task = null;
+        for (TaskModel t : tasks) {
+            if (t.getTaskId().equalsIgnoreCase(taskResult.getTaskId())) {
+                task = t;
+            }
+            LOGGER.info(
+                    "[Conductor] [WorkflowExecutor] getTaskModel Time taken for task: {},for workflowInstanceId {} and status {} "
+                            + "and workerId {} and time is :{}",
+                    taskResult.getTaskId(), taskResult.getWorkflowInstanceId(), taskResult.getStatus(), taskResult.getWorkerId(),
+                    (System.currentTimeMillis() - start1));
+        }
+        if (task == null) {
+            throw new NotFoundException("No such task found by id: %s", taskResult.getTaskId());
+        }
+
+        /*TaskModel task =
                 Optional.ofNullable(executionDAOFacade.getTaskModel(taskResult.getTaskId()))
                         .orElseThrow(
                                 () ->
                                         new NotFoundException(
                                                 "No such task found by id: %s",
-                                                taskResult.getTaskId()));
+                                                taskResult.getTaskId()));*/
 
         LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
                 task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
@@ -861,7 +878,10 @@ public class WorkflowExecutor {
             LOGGER.error(errorMsg, e);
         }
 
-        taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
+        for(TaskExecLog taskExecLog : taskResult.getLogs()) {
+            taskExecLog.setTaskId(task.getTaskId());
+        }
+        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
         executionDAOFacade.addTaskExecLog(taskResult.getLogs());
 
         if (task.getStatus().isTerminal()) {
@@ -874,7 +894,8 @@ public class WorkflowExecutor {
         }
 
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            decide(workflowId);
+            //decide(workflowId);
+            decide(workflowInstance);
         }
     }
 
