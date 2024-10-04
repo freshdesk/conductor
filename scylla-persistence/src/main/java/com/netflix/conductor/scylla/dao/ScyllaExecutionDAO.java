@@ -254,12 +254,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        BatchStatement batchStatement = new BatchStatement();
-                        batchStatement.add(updateTaskLookupStatement.bind(
-                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        batchStatement.add(updateWorkflowLookupStatement.bind(
-                                correlationId, workflowUUID));
-                        session.execute(batchStatement);
+                        session.execute(
+                                updateTaskLookupStatement.bind(
+                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        session.execute(
+                                updateWorkflowLookupStatement.bind(
+                                        correlationId, workflowUUID));
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
@@ -289,10 +289,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            // update the total tasks and partitions for the workflow
-            batchStatement.add(updateTotalPartitionsStatement.bind(
-                    DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
             session.execute(batchStatement);
+            // update the total tasks and partitions for the workflow
+            session.execute(
+                    updateTotalPartitionsStatement.bind(
+                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
@@ -308,14 +310,20 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
-        ResultSet resultSet = session.execute(
-                "INSERT INTO conductor_lt.task_in_progress (task_def_name, task_id, workflow_id, in_progress_status) " +
-                        "VALUES (?, ?, ?, ?) IF NOT EXISTS", task.getTaskDefName(), UUID.fromString(task.getTaskId()),
-                UUID.fromString(task.getWorkflowInstanceId()), true);
-
-        if (!resultSet.wasApplied()) {
-            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as it already exists", task.getTaskDefName(),
-                    task.getTaskId(), task.getStatus());
+        ResultSet resultSet =
+                session.execute(
+                        selectTaskInProgressStatement.bind(task.getTaskDefName(),
+                                UUID.fromString(task.getTaskId())));
+        if (resultSet.isExhausted()) {
+            session.execute(
+                    insertTaskInProgressStatement.bind(task.getTaskDefName(),
+                            UUID.fromString(task.getTaskId()),
+                            UUID.fromString(task.getWorkflowInstanceId()),
+                            true));
+        }
+        else {
+            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
+                    ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
         }
     }
 
@@ -376,46 +384,37 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     @Override
     public void updateTasksInBatch(List<TaskModel> tasks) {
-        if (tasks == null || tasks.isEmpty()) {
-            return; // No tasks to process
-        }
-
-        long startBatch = System.currentTimeMillis();
-
+        BatchStatement batch = new BatchStatement();
         try {
-            // Acquire a global lock for batch update if needed
-            // Create a batch statement to execute multiple updates in one call
-            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.LOGGED);
-
-            // Loop through the list of tasks and prepare batch updates
             for (TaskModel task : tasks) {
                 Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
                 String taskPayload = toJson(task);
 
-                // Add the update statement for each task to the batch
-                batchStatement.add(
-                        insertTaskStatement.bind(
-                                UUID.fromString(task.getWorkflowInstanceId()),
-                                correlationId,
-                                task.getTaskId(),
-                                taskPayload
-                        )
-                );
+                recordCassandraDaoRequests("updateTask", task.getTaskType(), task.getWorkflowType());
+                recordCassandraDaoPayloadSize("updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
+                TaskModel prevTask = getTask(task.getTaskId());
+
+                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
+                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(), prevTask.getStatus());
+
+                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                    batch.add(insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
+
+                    LOGGER.debug("Prepared updateTask for task {} with taskStatus {} with taskRefName {} for workflowId {} ", task.getTaskId(),
+                            task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                }
+                verifyTaskStatus(task);
             }
 
-            // Execute the batch of updates
-            long tstart = System.currentTimeMillis();
-            session.execute(batchStatement);
-            LOGGER.info("Batch execution of task updates completed in {} ms for {} tasks.",
-                    (System.currentTimeMillis() - tstart), tasks.size());
+            // Execute the batch update
+            session.execute(batch);
+            LOGGER.debug("Batch update executed for {} tasks", tasks.size());
         } catch (DriverException e) {
-            Monitors.error(CLASS_NAME, "updateTaskInBatch");
-            String errorMsg = String.format("Error updating batch of tasks. Size: %d", tasks.size());
+            Monitors.error(CLASS_NAME, "updateTask");
+            String errorMsg = "Error updating tasks in batch for workflow.";
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
-        LOGGER.info("[Conductor] [ScyllaExecutionDAO] Batch updateTask Time taken for {} tasks: {} ms",
-                tasks.size(), (System.currentTimeMillis() - startBatch));
     }
 
     /**
