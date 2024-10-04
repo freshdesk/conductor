@@ -308,8 +308,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
-        ResultSet resultSet = session.execute("INSERT INTO task_in_progress (task_def_name, task_id, workflow_instance_id, task_in_prog_status) "
-                        + "VALUES (?, ?, ?, ?) IF NOT EXISTS", task.getTaskDefName(), UUID.fromString(task.getTaskId()),
+        ResultSet resultSet = session.execute(
+                "INSERT INTO conductor_lt.task_in_progress (task_def_name, task_id, workflow_id, in_progress_status) " +
+                        "VALUES (?, ?, ?, ?) IF NOT EXISTS", task.getTaskDefName(), UUID.fromString(task.getTaskId()),
                 UUID.fromString(task.getWorkflowInstanceId()), true);
 
         if (!resultSet.wasApplied()) {
