@@ -14,6 +14,7 @@ package com.netflix.conductor.scylla.dao;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -310,22 +311,18 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @method to add the task_in_progress table with the status of the task if task is not already present
      */
     public void addTaskInProgress(TaskModel task) {
-        ResultSet resultSet =
-                session.execute(
-                        selectTaskInProgressStatement.bind(task.getTaskDefName(),
-                                UUID.fromString(task.getTaskId())));
-        if (resultSet.all().isEmpty() || resultSet.all().size()<1) {
-            session.execute(
-                    insertTaskInProgressStatement.bind(task.getTaskDefName(),
-                            UUID.fromString(task.getTaskId()),
-                            UUID.fromString(task.getWorkflowInstanceId()),
-                            true));
+        ResultSet resultSet = session.execute(
+                QueryBuilder.insertInto(properties.getKeyspace(), TABLE_TASK_IN_PROGRESS)
+                        .value(TASK_DEF_NAME_KEY, task.getTaskDefName())
+                        .value(TASK_ID_KEY, UUID.fromString(task.getTaskId()))
+                        .value(WORKFLOW_ID_KEY, UUID.fromString(task.getWorkflowInstanceId()))
+                        .value(TASK_IN_PROG_STATUS_KEY, true)
+                        .ifNotExists()  // Ensures this is a lightweight transaction
+                        .getQueryString()
+        );
+        if (!resultSet.wasApplied()) {
+            LOGGER.info("Task with defName {} and Id {} already exists, insert skipped.", task.getTaskDefName(), task.getTaskId());
         }
-        else {
-            LOGGER.info("Task with defName {} and Id {} and status {} in addTaskInProgress NOT inserted as already exists  "
-                    ,task.getTaskDefName(), task.getTaskId(),task.getStatus());
-        }
-
     }
 
     /**
@@ -380,6 +377,51 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
+    }
+
+
+    @Override
+    public void updateTasksInBatch(List<TaskModel> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return; // No tasks to process
+        }
+
+        long startBatch = System.currentTimeMillis();
+
+        try {
+            // Acquire a global lock for batch update if needed
+            // Create a batch statement to execute multiple updates in one call
+            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.LOGGED);
+
+            // Loop through the list of tasks and prepare batch updates
+            for (TaskModel task : tasks) {
+                Integer correlationId = Objects.isNull(task.getCorrelationId()) ? 0 : Integer.parseInt(task.getCorrelationId());
+                String taskPayload = toJson(task);
+
+                // Add the update statement for each task to the batch
+                batchStatement.add(
+                        insertTaskStatement.bind(
+                                UUID.fromString(task.getWorkflowInstanceId()),
+                                correlationId,
+                                task.getTaskId(),
+                                taskPayload
+                        )
+                );
+            }
+
+            // Execute the batch of updates
+            long tstart = System.currentTimeMillis();
+            session.execute(batchStatement);
+            LOGGER.info("Batch execution of task updates completed in {} ms for {} tasks.",
+                    (System.currentTimeMillis() - tstart), tasks.size());
+        } catch (DriverException e) {
+            Monitors.error(CLASS_NAME, "updateTaskInBatch");
+            String errorMsg = String.format("Error updating batch of tasks. Size: %d", tasks.size());
+            LOGGER.error(errorMsg, e);
+            throw new TransientException(errorMsg, e);
+        }
+        LOGGER.info("[Conductor] [ScyllaExecutionDAO] Batch updateTask Time taken for {} tasks: {} ms",
+                tasks.size(), (System.currentTimeMillis() - startBatch));
     }
 
     /**
