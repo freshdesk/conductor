@@ -264,7 +264,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
 
             // update all the tasks in the workflow using batch
-            BatchStatement batchStatement = new BatchStatement();
+            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
             tasks.forEach(
                     task -> {
                         String taskPayload = toJson(task);
@@ -288,11 +288,11 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            session.execute(batchStatement);
             // update the total tasks and partitions for the workflow
-            session.execute(
+            batchStatement.add(
                     updateTotalPartitionsStatement.bind(
                             DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+            session.execute(batchStatement);
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
@@ -982,7 +982,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
             recordCassandraDaoRequests("removeTask", task.getTaskType(), task.getWorkflowType());
             // delete task from workflows table and decrement total tasks by 1
-            BatchStatement batchStatement = new BatchStatement();
+            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
             batchStatement.add(
                     deleteTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
