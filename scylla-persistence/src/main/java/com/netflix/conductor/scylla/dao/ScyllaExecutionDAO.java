@@ -398,7 +398,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      */
     public TaskModel.Status getTaskPrevStatus(String taskId) {
         RBucket<TaskModel.Status> taskStatusBucket = redissonClient.getBucket(getTaskKey(taskId));
-        LOGGER.info("Fetched task status for taskId: {} with TTL of {} hour(s).", taskId);
+        LOGGER.info("Fetched task status for taskId: {} with status of {}", taskId, taskStatusBucket.get());
         return taskStatusBucket.get();
     }
 
