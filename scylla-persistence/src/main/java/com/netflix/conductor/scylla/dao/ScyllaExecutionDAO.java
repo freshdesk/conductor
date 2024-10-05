@@ -356,16 +356,16 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
             if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
                 //TaskModel prevTask = getTask(task.getTaskId());
-                TaskModel.Status prevStatus = getTaskPrevStatus(task.getTaskId());
+                /*TaskModel.Status prevStatus = getTaskPrevStatus(task.getTaskId());
 
-                if (prevStatus == null || !prevStatus.equals(TaskModel.Status.COMPLETED)) {
+                if (prevStatus == null || !prevStatus.equals(TaskModel.Status.COMPLETED)) {*/
                     session.execute(
                             insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
                     LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
                             task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
-                }
+                //}
                 verifyTaskStatus(task);
-                storeTaskStatusInCache(task);
+                //storeTaskStatusInCache(task);
             }
             redisLock.releaseLock(task.getTaskId());
         } catch (DriverException e) {
