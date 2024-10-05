@@ -253,12 +253,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        session.execute(
-                                updateTaskLookupStatement.bind(
-                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        session.execute(
-                                updateWorkflowLookupStatement.bind(
-                                        correlationId, workflowUUID));
+                        BatchStatement batchStatement = new BatchStatement();
+                        batchStatement.add(updateTaskLookupStatement.bind(
+                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        batchStatement.add(updateWorkflowLookupStatement.bind(
+                                correlationId, workflowUUID));
+                        session.execute(batchStatement);
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
