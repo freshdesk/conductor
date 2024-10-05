@@ -31,6 +31,8 @@ import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.model.TaskModel;
 import com.netflix.conductor.model.WorkflowModel;
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -49,7 +51,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaExecutionDAO.class);
     private static final String CLASS_NAME = ScyllaExecutionDAO.class.getSimpleName();
-    private static final Object lock = new Object();
+
 
     protected final PreparedStatement insertWorkflowStatement;
     protected final PreparedStatement insertTaskStatement;
@@ -89,6 +91,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     protected final int eventExecutionsTTL;
     private RedisLock redisLock;
+    private RedissonClient redisson;
 
     public ScyllaExecutionDAO(
             Session session,
@@ -254,12 +257,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        session.execute(
-                                updateTaskLookupStatement.bind(
-                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        session.execute(
-                                updateWorkflowLookupStatement.bind(
-                                        correlationId, workflowUUID));
+                        BatchStatement batchStatement = new BatchStatement();
+                        batchStatement.add(updateTaskLookupStatement.bind(
+                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        batchStatement.add(updateWorkflowLookupStatement.bind(
+                                correlationId, workflowUUID));
+                        session.execute(batchStatement);
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
@@ -289,12 +292,10 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            session.execute(batchStatement);
             // update the total tasks and partitions for the workflow
-            session.execute(
-                    updateTotalPartitionsStatement.bind(
-                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
-
+            batchStatement.add(updateTotalPartitionsStatement.bind(
+                    DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+            session.execute(batchStatement);
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
@@ -353,22 +354,17 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
             if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
-                /*TaskModel prevTask = getTask(task.getTaskId());
-                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
-                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
-                        prevTask.getStatus());*/
+                //TaskModel prevTask = getTask(task.getTaskId());
+                TaskModel.Status prevStatus = getTaskPrevStatus(task.getTaskId());
 
-                //if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                if (prevStatus == null || !prevStatus.equals(TaskModel.Status.COMPLETED)) {
                     session.execute(
-                            insertTaskStatement.bind(
-                                    UUID.fromString(task.getWorkflowInstanceId()),
-                                    correlationId,
-                                    task.getTaskId(),
-                                    taskPayload));
-                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
-                            task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
-                //}
+                            insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
+                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
+                            task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                }
                 verifyTaskStatus(task);
+                storeTaskStatusInCache(task);
             }
             redisLock.releaseLock(task.getTaskId());
         } catch (DriverException e) {
@@ -380,6 +376,41 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg, e);
         }
+    }
+
+    /**
+     * Store the task status in the cache with a TTL of 1 hour.
+     *
+     * @param task the task whose status needs to be cached.
+     */
+    public void storeTaskStatusInCache(TaskModel task) {
+        RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(task.getTaskId()));
+
+        taskStatusBucket.set(task.getStatus(), TASK_IN_REDIS_TTL_HOURS, TimeUnit.HOURS);
+        LOGGER.info("Stored task status for taskId: {} with TTL of {} hour(s).", task.getTaskId(), TASK_IN_REDIS_TTL_HOURS);
+    }
+
+    /**
+     * Retrieve the previous status of the task from the cache.
+     *
+     * @param taskId the ID of the task whose previous status needs to be retrieved.
+     * @return the previous task status if available, null otherwise.
+     */
+    public TaskModel.Status getTaskPrevStatus(String taskId) {
+        RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(taskId));
+        TaskModel.Status currentStatus = taskStatusBucket.get();
+        LOGGER.info("Fetched task status for taskId: {} with status of {}", taskId, currentStatus);
+        return currentStatus;
+    }
+
+    /**
+     * Helper method to construct the Redis key for a task.
+     *
+     * @param taskId the ID of the task.
+     * @return the key to be used for caching.
+     */
+    private String getTaskKey(String taskId) {
+        return TASK_PREFIX + taskId;
     }
 
     /**
@@ -1128,5 +1159,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.redisLock = (RedisLock) applicationContext.getBean("provideRedisLock");
+        this.redisson = (RedissonClient) applicationContext.getBean("redisson");
     }
 }
