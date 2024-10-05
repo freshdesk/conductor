@@ -872,10 +872,10 @@ public class WorkflowExecutor {
             LOGGER.error(errorMsg, e);
         }
 
+        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
         for (TaskExecLog taskExecLog : taskResult.getLogs()) {
             taskExecLog.setTaskId(task.getTaskId());
         }
-        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
         executionDAOFacade.addTaskExecLog(taskResult.getLogs());
 
         if (task.getStatus().isTerminal()) {

@@ -58,7 +58,4 @@ public interface Constants {
 
     int DEFAULT_SHARD_ID = 1;
     int DEFAULT_TOTAL_PARTITIONS = 1;
-
-    String TASK_PREFIX = "task:";
-    int TASK_IN_REDIS_TTL_HOURS = 5;
 }
