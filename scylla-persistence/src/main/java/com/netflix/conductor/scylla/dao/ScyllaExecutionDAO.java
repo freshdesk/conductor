@@ -385,10 +385,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @param task the task whose status needs to be cached.
      */
     public void storeTaskStatusInCache(TaskModel task) {
-        RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(task.getTaskId()));
+        long start = System.currentTimeMillis();
+        if (task.getStatus().equals(TaskModel.Status.COMPLETED)) {
+            RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(task.getTaskId()));
 
-        taskStatusBucket.set(task.getStatus(), TASK_IN_REDIS_TTL_HOURS, TimeUnit.HOURS);
-        LOGGER.info("Stored task status for taskId: {} with TTL of {} hour(s).", task.getTaskId(), TASK_IN_REDIS_TTL_HOURS);
+            taskStatusBucket.set(task.getStatus(), TASK_IN_REDIS_TTL_HOURS, TimeUnit.MINUTES);
+            LOGGER.info("Stored task status for taskId: {} with TTL of {} hour(s).", task.getTaskId(), TASK_IN_REDIS_TTL_HOURS);
+            LOGGER.info("storeTaskStatusInCache duration {}", (System.currentTimeMillis() - start));
+        }
     }
 
     /**
@@ -398,9 +402,11 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @return the previous task status if available, null otherwise.
      */
     public TaskModel.Status getTaskPrevStatus(String taskId) {
+        long start = System.currentTimeMillis();
         RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(taskId));
         TaskModel.Status currentStatus = taskStatusBucket.get();
         LOGGER.info("Fetched task status for taskId: {} with status of {}", taskId, currentStatus);
+        LOGGER.info("getTaskPrevStatus duration {}", (System.currentTimeMillis() - start));
         return currentStatus;
     }
 
