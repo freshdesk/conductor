@@ -91,7 +91,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     protected final int eventExecutionsTTL;
     private RedisLock redisLock;
-    private RedissonClient redissonClient;
+    private RedissonClient redisson;
 
     public ScyllaExecutionDAO(
             Session session,
@@ -384,7 +384,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @param task the task whose status needs to be cached.
      */
     public void storeTaskStatusInCache(TaskModel task) {
-        RBucket<TaskModel.Status> taskStatusBucket = redissonClient.getBucket(getTaskKey(task.getTaskId()));
+        RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(task.getTaskId()));
 
         taskStatusBucket.set(task.getStatus(), TASK_IN_REDIS_TTL_HOURS, TimeUnit.HOURS);
         LOGGER.info("Stored task status for taskId: {} with TTL of {} hour(s).", task.getTaskId(), TASK_IN_REDIS_TTL_HOURS);
@@ -397,7 +397,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      * @return the previous task status if available, null otherwise.
      */
     public TaskModel.Status getTaskPrevStatus(String taskId) {
-        RBucket<TaskModel.Status> taskStatusBucket = redissonClient.getBucket(getTaskKey(taskId));
+        RBucket<TaskModel.Status> taskStatusBucket = redisson.getBucket(getTaskKey(taskId));
         TaskModel.Status currentStatus = taskStatusBucket.get();
         LOGGER.info("Fetched task status for taskId: {} with status of {}", taskId, currentStatus);
         return currentStatus;
@@ -1158,6 +1158,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.redisLock = (RedisLock) applicationContext.getBean("provideRedisLock");
-        this.redissonClient = (RedissonClient) applicationContext.getBean("redissonClient");
+        this.redisson = (RedissonClient) applicationContext.getBean("redisson");
     }
 }
