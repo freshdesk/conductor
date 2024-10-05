@@ -254,12 +254,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        session.execute(
-                                updateTaskLookupStatement.bind(
-                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        session.execute(
-                                updateWorkflowLookupStatement.bind(
-                                        correlationId, workflowUUID));
+                        BatchStatement batchStatement = new BatchStatement();
+                        batchStatement.add(updateTaskLookupStatement.bind(
+                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        batchStatement.add(updateWorkflowLookupStatement.bind(
+                                correlationId, workflowUUID));
+                        session.execute(batchStatement);
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
@@ -289,12 +289,10 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            session.execute(batchStatement);
             // update the total tasks and partitions for the workflow
-            session.execute(
-                    updateTotalPartitionsStatement.bind(
-                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
-
+            batchStatement.add(updateTotalPartitionsStatement.bind(
+                    DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
+            session.execute(batchStatement);
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
@@ -353,21 +351,15 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
             if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
-                TaskModel prevTask = getTask(task.getTaskId());
-                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
-                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
-                        prevTask.getStatus());
+                //TaskModel prevTask = getTask(task.getTaskId());
+                // Todo : replace this with redis operation
 
-                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
-                    session.execute(
-                            insertTaskStatement.bind(
-                                    UUID.fromString(task.getWorkflowInstanceId()),
-                                    correlationId,
-                                    task.getTaskId(),
-                                    taskPayload));
-                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
-                            task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
-                }
+                //if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                session.execute(
+                        insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
+                LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
+                        task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                //}
                 verifyTaskStatus(task);
             }
             redisLock.releaseLock(task.getTaskId());
