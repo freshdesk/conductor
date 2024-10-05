@@ -257,12 +257,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        BatchStatement batchStatement = new BatchStatement();
-                        batchStatement.add(updateTaskLookupStatement.bind(
-                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
-                        batchStatement.add(updateWorkflowLookupStatement.bind(
-                                correlationId, workflowUUID));
-                        session.execute(batchStatement);
+                        session.execute(
+                                updateTaskLookupStatement.bind(
+                                        workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                        session.execute(
+                                updateWorkflowLookupStatement.bind(
+                                        correlationId, workflowUUID));
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
@@ -292,10 +292,11 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
-            // update the total tasks and partitions for the workflow
-            batchStatement.add(updateTotalPartitionsStatement.bind(
-                    DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
             session.execute(batchStatement);
+            // update the total tasks and partitions for the workflow
+            session.execute(
+                    updateTotalPartitionsStatement.bind(
+                            DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
