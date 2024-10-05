@@ -71,7 +71,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
     protected final PreparedStatement selectShardFromWorkflowLookupStatement;
     protected final PreparedStatement updateWorkflowLookupStatement;
     protected final PreparedStatement deleteWorkflowLookupStatement;
-    protected final PreparedStatement selectTasksFromTaskDefLimitStatement;
+    //protected final PreparedStatement selectTasksFromTaskDefLimitStatement;
     protected final PreparedStatement selectEventExecutionsStatement;
 
     protected final PreparedStatement updateWorkflowStatement;
@@ -165,9 +165,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
         this.selectTaskLookupStatement =
                 session.prepare(statements.getSelectTaskFromLookupTableStatement())
                         .setConsistencyLevel(properties.getReadConsistencyLevel());
-        this.selectTasksFromTaskDefLimitStatement =
+        /*this.selectTasksFromTaskDefLimitStatement =
                 session.prepare(statements.getSelectTasksFromTaskDefLimitStatement())
-                        .setConsistencyLevel(properties.getReadConsistencyLevel());
+                        .setConsistencyLevel(properties.getReadConsistencyLevel());*/
         this.selectEventExecutionsStatement =
                 session.prepare(
                                 statements
@@ -405,7 +405,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
      */
     @Override
     public boolean exceedsLimit(TaskModel task) {
-        Optional<TaskDef> taskDefinition = task.getTaskDefinition();
+        /*Optional<TaskDef> taskDefinition = task.getTaskDefinition();
         if (taskDefinition.isEmpty()) {
             return false;
         }
@@ -444,7 +444,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                             task.getTaskDefName(), task.getTaskId(), task.getWorkflowInstanceId());
             LOGGER.error(errorMsg, e);
             throw new TransientException(errorMsg);
-        }
+        }*/
         return false;
     }
 
