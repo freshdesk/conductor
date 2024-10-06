@@ -351,14 +351,14 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
             if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
-                TaskModel prevTask = getTaskFromWorkflowsTable(task.getTaskId(), task.getWorkflowInstanceId(), correlationId);
+                //TaskModel prevTask = getTask(task.getTaskId());
 
-                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
-                    session.execute(
-                            insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
-                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
-                            task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
-                }
+                //if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
+                session.execute(
+                        insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
+                LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
+                        task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                //}
                 verifyTaskStatus(task);
             }
             redisLock.releaseLock(task.getTaskId());
@@ -447,18 +447,6 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             return false;
         }
         return removeTask(task);
-    }
-
-    public TaskModel getTaskFromWorkflowsTable(String taskId, String workflowId, Integer correlationId) {
-        try {
-            ResultSet resultSet = session.execute(selectTaskStatement.bind(UUID.fromString(workflowId), correlationId, taskId));
-            return Optional.ofNullable(resultSet.one()).map(row -> readValue(row.getString(PAYLOAD_KEY), TaskModel.class)).orElse(null);
-        } catch (DriverException e) {
-            Monitors.error(CLASS_NAME, "getTask");
-            String errorMsg = String.format("Error getting task by id: %s", taskId);
-            LOGGER.error(errorMsg, e);
-            throw new TransientException(errorMsg);
-        }
     }
 
     @Override
