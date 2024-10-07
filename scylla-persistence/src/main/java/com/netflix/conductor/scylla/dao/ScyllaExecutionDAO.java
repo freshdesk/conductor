@@ -49,7 +49,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScyllaExecutionDAO.class);
     private static final String CLASS_NAME = ScyllaExecutionDAO.class.getSimpleName();
-
+    private static final Object lock = new Object();
 
     protected final PreparedStatement insertWorkflowStatement;
     protected final PreparedStatement insertTaskStatement;
@@ -254,7 +254,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         if (task.getScheduledTime() == 0) {
                             task.setScheduledTime(System.currentTimeMillis());
                         }
-                        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+                        BatchStatement batchStatement = new BatchStatement();
                         batchStatement.add(updateTaskLookupStatement.bind(
                                 workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
                         batchStatement.add(updateWorkflowLookupStatement.bind(
@@ -265,7 +265,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
 
             // update all the tasks in the workflow using batch
-            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+            BatchStatement batchStatement = new BatchStatement();
             tasks.forEach(
                     task -> {
                         String taskPayload = toJson(task);
@@ -289,11 +289,12 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                     });
             batchStatement.add(
                     updateTotalTasksStatement.bind(totalTasks, workflowUUID, correlationId));
+            session.execute(batchStatement);
             // update the total tasks and partitions for the workflow
-            batchStatement.add(
+            session.execute(
                     updateTotalPartitionsStatement.bind(
                             DEFAULT_TOTAL_PARTITIONS, totalTasks, workflowUUID, correlationId));
-            session.execute(batchStatement);
+
             return tasks;
         } catch (DriverException e) {
             Monitors.error(CLASS_NAME, "createTasks");
@@ -352,13 +353,23 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
             recordCassandraDaoPayloadSize(
                     "updateTask", taskPayload.length(), task.getTaskType(), task.getWorkflowType());
             if (redisLock.acquireLock(task.getTaskId(), 2, TimeUnit.SECONDS)) {
-                //TaskModel prevTask = getTask(task.getTaskId());
+                /**
+                 * commenting this block of code as its no longer required as we already have a redis based distributed locking,
+                 * which can now handle dirty read write.
+                 * TaskModel prevTask = getTask(task.getTaskId());
+                LOGGER.debug("Received updateTask for task {} with taskStatus {} in workflow {} with taskRefName {} and prevTaskStatus {} ",
+                        task.getTaskId(), task.getStatus(), task.getWorkflowInstanceId(), task.getReferenceTaskName(),
+                        prevTask.getStatus());
 
-                //if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {
-                session.execute(
-                        insertTaskStatement.bind(UUID.fromString(task.getWorkflowInstanceId()), correlationId, task.getTaskId(), taskPayload));
-                LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ", task.getTaskId(),
-                        task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
+                if (!prevTask.getStatus().equals(TaskModel.Status.COMPLETED)) {**/
+                    session.execute(
+                            insertTaskStatement.bind(
+                                    UUID.fromString(task.getWorkflowInstanceId()),
+                                    correlationId,
+                                    task.getTaskId(),
+                                    taskPayload));
+                    LOGGER.debug("Updated updateTask for task {} with taskStatus {}  with taskRefName {} for workflowId {} ",
+                            task.getTaskId(), task.getStatus(), task.getReferenceTaskName(), task.getWorkflowInstanceId());
                 //}
                 verifyTaskStatus(task);
             }
@@ -970,7 +981,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
 
             recordCassandraDaoRequests("removeTask", task.getTaskType(), task.getWorkflowType());
             // delete task from workflows table and decrement total tasks by 1
-            BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+            BatchStatement batchStatement = new BatchStatement();
             batchStatement.add(
                     deleteTaskStatement.bind(
                             UUID.fromString(task.getWorkflowInstanceId()),
