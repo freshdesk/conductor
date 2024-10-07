@@ -114,7 +114,6 @@ public class Statements {
                 .value(WORKFLOW_DEF_NAME_KEY, bindMarker())
                 .value(WORKFLOW_VERSION_KEY, bindMarker())
                 .value(WORKFLOW_DEFINITION_KEY, bindMarker())
-                .ifNotExists()
                 .getQueryString();
     }
 
@@ -303,7 +302,6 @@ public class Statements {
                 .value(EVENT_HANDLER_NAME_KEY, bindMarker())
                 .value(EVENT_EXECUTION_ID_KEY, bindMarker())
                 .value(PAYLOAD_KEY, bindMarker())
-                .ifNotExists()
                 .getQueryString();
     }
 
