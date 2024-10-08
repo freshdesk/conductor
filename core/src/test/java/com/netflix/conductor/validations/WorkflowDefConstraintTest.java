@@ -23,7 +23,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 
-import org.apache.bval.jsr.ApacheValidationProvider;
+import org.hibernate.validator.HibernateValidator;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -50,7 +50,7 @@ public class WorkflowDefConstraintTest {
     @BeforeClass
     public static void init() {
         validatorFactory =
-                Validation.byProvider(ApacheValidationProvider.class)
+                Validation.byProvider(HibernateValidator.class)
                         .configure()
                         .buildValidatorFactory();
         validator = validatorFactory.getValidator();

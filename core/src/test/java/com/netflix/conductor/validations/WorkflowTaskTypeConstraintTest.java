@@ -26,7 +26,7 @@ import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import javax.validation.executable.ExecutableValidator;
 
-import org.apache.bval.jsr.ApacheValidationProvider;
+import org.hibernate.validator.HibernateValidator;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -55,7 +55,7 @@ public class WorkflowTaskTypeConstraintTest {
     @BeforeClass
     public static void init() {
         validatorFactory =
-                Validation.byProvider(ApacheValidationProvider.class)
+                Validation.byProvider(HibernateValidator.class)
                         .configure()
                         .buildValidatorFactory();
         validator = validatorFactory.getValidator();
