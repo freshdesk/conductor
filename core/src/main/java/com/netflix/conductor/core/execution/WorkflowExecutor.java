@@ -888,8 +888,7 @@ public class WorkflowExecutor {
         }
 
         if (!isLazyEvaluateWorkflow(workflowInstance.getWorkflowDefinition(), task)) {
-            //decide(workflowId);
-            decide(workflowInstance);
+            decide(workflowId);
         }
     }
 
