@@ -256,9 +256,9 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                         }
                         BatchStatement batchStatement = new BatchStatement();
                         batchStatement.add(updateTaskLookupStatement.bind(
-                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
+                                workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")).enableTracing());
                         batchStatement.add(updateWorkflowLookupStatement.bind(
-                                correlationId, workflowUUID));
+                                correlationId, workflowUUID).enableTracing());
                         session.execute(batchStatement.enableTracing());
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
