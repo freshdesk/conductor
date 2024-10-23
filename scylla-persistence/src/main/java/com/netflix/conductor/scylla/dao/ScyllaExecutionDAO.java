@@ -259,7 +259,7 @@ public class ScyllaExecutionDAO extends ScyllaBaseDAO
                                 workflowUUID, correlationId, toUUID(task.getTaskId(), "Invalid task id")));
                         batchStatement.add(updateWorkflowLookupStatement.bind(
                                 correlationId, workflowUUID));
-                        session.execute(batchStatement);
+                        session.execute(batchStatement.enableTracing());
                         // Added the task to task_in_progress table
                         addTaskInProgress(task);
                     });
