@@ -261,6 +261,18 @@ public class RedisExecutionDAO extends BaseDynoDAO
     }
 
     @Override
+    public void updateTasksInBatch(List<TaskModel> tasks) {
+        TaskModel task = tasks.get(0);
+        LOGGER.debug(
+                "Workflow Task removed from TASKS_IN_PROGRESS_STATUS with tasksInProgressKey: {}, workflowId: {}, taskId: {}, taskType: {}, taskStatus: {} during updateTask",
+                nsKey(IN_PROGRESS_TASKS, task.getTaskDefName()),
+                task.getWorkflowInstanceId(),
+                task.getTaskId(),
+                task.getTaskType(),
+                task.getStatus().name());
+    }
+
+    @Override
     public boolean exceedsLimit(TaskModel task) {
         Optional<TaskDef> taskDefinition = task.getTaskDefinition();
         if (taskDefinition.isEmpty()) {
