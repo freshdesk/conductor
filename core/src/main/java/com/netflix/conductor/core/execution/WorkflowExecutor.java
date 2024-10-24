@@ -713,15 +713,26 @@ public class WorkflowExecutor {
         }
 
         String workflowId = taskResult.getWorkflowInstanceId();
-        WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, false);
+        WorkflowModel workflowInstance = executionDAOFacade.getWorkflowModel(workflowId, true);
 
-        TaskModel task =
+        List<TaskModel> tasks = workflowInstance.getTasks();
+        TaskModel task = null;
+        for (TaskModel t : tasks) {
+            if (t.getTaskId().equalsIgnoreCase(taskResult.getTaskId())) {
+                task = t;
+            }
+        }
+        if (task == null) {
+            throw new NotFoundException("No such task found by id: %s", taskResult.getTaskId());
+        }
+
+        /*TaskModel task =
                 Optional.ofNullable(executionDAOFacade.getTaskModel(taskResult.getTaskId()))
                         .orElseThrow(
                                 () ->
                                         new NotFoundException(
                                                 "No such task found by id: %s",
-                                                taskResult.getTaskId()));
+                                                taskResult.getTaskId()));*/
 
         LOGGER.debug("WE updateTask: taskId {} with taskStatus {} belonging to workflowId {} being updated with workflowStatus {}",
                 task.getTaskId(), task.getStatus(), workflowInstance, workflowInstance.getStatus());
@@ -861,7 +872,10 @@ public class WorkflowExecutor {
             LOGGER.error(errorMsg, e);
         }
 
-        taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
+        //taskResult.getLogs().forEach(taskExecLog -> taskExecLog.setTaskId(task.getTaskId()));
+        for (TaskExecLog taskExecLog : taskResult.getLogs()) {
+            taskExecLog.setTaskId(task.getTaskId());
+        }
         executionDAOFacade.addTaskExecLog(taskResult.getLogs());
 
         if (task.getStatus().isTerminal()) {
@@ -1046,7 +1060,7 @@ public class WorkflowExecutor {
 
         // we find any sub workflow tasks that have changed
         // and change the workflow/task state accordingly
-        adjustStateIfSubWorkflowChanged(workflow);
+        //adjustStateIfSubWorkflowChanged(workflow);
 
         try {
             DeciderService.DeciderOutcome outcome = deciderService.decide(workflow);
