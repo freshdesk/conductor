@@ -9,16 +9,33 @@ event-filter:
               operator: contains
               values: COMPLETED,TERMINATED,FAILED,RUNNING
         task:
-          rules:
-            - field: status
-              caseType: includes
-              operator: contains
-              values: CANCELED,COMPLETED_WITH_ERRORS,FAILED,FAILED_WITH_TERMINAL_ERROR
-            - field: taskType
-              caseType: excludes
-              operator: contains
-              values: FORK_JOIN,SWITCH,JOIN,WAIT,SUB_WORKFLOW
-            - field: referenceTaskName
-              caseType: excludes
-              operator: startsWith
-              values: wTimer,wCleanup,wDecision
+          # Published if ANY group matches (AND within a group).
+          matchAny:
+            # Group 1: unchanged - terminal/error statuses for regular journey tasks.
+            - rules:
+                - field: status
+                  caseType: includes
+                  operator: contains
+                  values: CANCELED,COMPLETED_WITH_ERRORS,FAILED,FAILED_WITH_TERMINAL_ERROR
+                - field: taskType
+                  caseType: excludes
+                  operator: contains
+                  values: FORK_JOIN,SWITCH,JOIN,WAIT,SUB_WORKFLOW
+                - field: referenceTaskName
+                  caseType: excludes
+                  operator: startsWith
+                  values: wTimer,wCleanup,wDecision
+            # Group 2: the start of an activity/timer wait task. journey-service consumes this to repoint the
+            # execution instance from the completed create task to the wait task, so that the external
+            # completion event completes the wait task. Scoped by reference name so no other task's
+            # IN_PROGRESS is published. Never add SCHEDULED/TIMED_OUT/SKIPPED here - the consumer's task
+            # status mapper rejects them.
+            - rules:
+                - field: referenceTaskName
+                  caseType: includes
+                  operator: startsWith
+                  values: wActWait,wTimerWait
+                - field: status
+                  caseType: includes
+                  operator: contains
+                  values: IN_PROGRESS

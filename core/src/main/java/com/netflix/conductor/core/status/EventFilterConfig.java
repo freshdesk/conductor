@@ -38,6 +38,28 @@ public class EventFilterConfig {
 
     public static class EntityRules {
         private List<Rule> rules;
+        // Optional. When set, the event is published if ANY group matches (OR of groups, AND within a
+        // group). Lets one entity express "these statuses for all tasks, plus another status for one
+        // specific family of tasks" - not expressible with the flat AND-of-rules `rules` list. When unset,
+        // `rules` is evaluated exactly as before.
+        private List<RuleGroup> matchAny;
+
+        public List<Rule> getRules() {
+            return rules;
+        }
+        public void setRules(List<Rule> rules) {
+            this.rules = rules;
+        }
+        public List<RuleGroup> getMatchAny() {
+            return matchAny;
+        }
+        public void setMatchAny(List<RuleGroup> matchAny) {
+            this.matchAny = matchAny;
+        }
+    }
+
+    public static class RuleGroup {
+        private List<Rule> rules;
 
         public List<Rule> getRules() {
             return rules;
@@ -95,6 +117,9 @@ public class EventFilterConfig {
      *    - the task status should be cancelled/failed/timeout/failed_with_terminate
      *    - the task type should not be fork_join/switch/join/sub_workflow/wait
      *    - the task reference name should not start with wTimer/wCleanup/wDecision
+     * An entity may instead declare `matchAny`: a list of rule groups where the event is published if
+     * ANY group passes (AND within a group). Used to allow IN_PROGRESS for the activity/timer wait tasks
+     * only, without widening the status rule for every other task type.
      * Sample Rule:
      *   - field: "status"
      *   - caseType: "includes"
@@ -112,11 +137,26 @@ public class EventFilterConfig {
 
     private boolean validateEntityRule(Object entity, EventFilterConfig.EntityRules entityRules) {
         // If no rules configured for the module all events should be published
-        if (entityRules == null || entityRules.getRules().isEmpty()) {
+        if (entityRules == null) {
             return true;
         }
 
-        for (EventFilterConfig.Rule rule : entityRules.getRules()) {
+        // OR across groups, AND within a group.
+        if (entityRules.getMatchAny() != null && !entityRules.getMatchAny().isEmpty()) {
+            return entityRules.getMatchAny().stream()
+                    .anyMatch(group -> allRulesValid(entity, group.getRules()));
+        }
+
+        return allRulesValid(entity, entityRules.getRules());
+    }
+
+    private boolean allRulesValid(Object entity, List<EventFilterConfig.Rule> rules) {
+        // If no rules configured all events should be published
+        if (rules == null || rules.isEmpty()) {
+            return true;
+        }
+
+        for (EventFilterConfig.Rule rule : rules) {
             if (!isRuleValid(entity, rule)) {
                 return false; // If any rule fails, return false immediately
             }
