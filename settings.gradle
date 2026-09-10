@@ -23,6 +23,8 @@ pluginManagement {
                 basic(BasicAuthentication)
             }
         }
+        gradlePluginPortal()
+        mavenCentral()
     }
 }
 
